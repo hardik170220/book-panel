@@ -4,9 +4,9 @@ import type { Metadata } from "next"
 // import { GeistMono } from "geist/font/mono"
 import { Analytics } from "@vercel/analytics/next"
 import "./globals.css"
-import { ThemeProvider } from "../app/utils/ThemeProvider"
+import { ThemeProvider } from "./utils/ThemeProvider"
 import { Suspense } from "react"
-import { Providers } from "../app/providers"
+import { Providers } from "./providers"
 
 export const metadata: Metadata = {
   title: "Ap-forms",
