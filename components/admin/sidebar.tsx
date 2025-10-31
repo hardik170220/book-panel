@@ -3,8 +3,8 @@
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { useTheme } from "next-themes"
-import type React from "react"
 import { useEffect, useState } from "react"
+import { signOut, useSession } from "next-auth/react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import {
@@ -41,33 +41,19 @@ export function Sidebar() {
   const router = useRouter()
   const { theme, setTheme } = useTheme()
   const [isLoggingOut, setIsLoggingOut] = useState(false)
-  const [user, setUser] = useState<{ name: string; role: string } | null>(null)
+  
+  // ✅ Use NextAuth session instead of manual fetch
+  const { data: session, status } = useSession()
+  const user = session?.user
 
-  // Fetch user info
+  // ✅ Redirect submission-admin users to /bookorder
   useEffect(() => {
-    async function fetchUser() {
-      try {
-        const res = await fetch("/api/whoami")
-        if (res.ok) {
-          const data = await res.json()
-          setUser({ name: data.name, role: data.role })
-        } else {
-          setUser(null)
-        }
-      } catch (err) {
-        console.error("Failed to fetch user:", err)
+    if (status === "authenticated" && user?.role === "submission-admin") {
+      if (!pathname.startsWith("/bookorder")) {
+        router.replace("/bookorder")
       }
     }
-    fetchUser()
-  }, [])
-
-  useEffect(() => {
-  if (user?.role === "submission-admin") {
-    if (!pathname.startsWith("/bookorder")) {
-      router.replace("/bookorder")
-    }
-  }
-}, [user, pathname, router])
+  }, [user, pathname, router, status])
 
   const allItems = [
     {
@@ -75,7 +61,7 @@ export function Sidebar() {
       label: "Dashboard",
       icon: <LayoutDashboardIcon className="h-4 w-4" />,
       match: (p: string) => p.startsWith("/admin/dashboard"),
-      roles: ["formbuilder-admin", "super admin"], // ✅ allowed roles
+      roles: ["formbuilder-admin", "super admin"],
     },
     {
       href: "/admin/forms",
@@ -83,27 +69,28 @@ export function Sidebar() {
       icon: <ListChecks className="h-4 w-4" />,
       match: (p: string) =>
         p.startsWith("/admin/forms") || p.startsWith("/admin/create-form"),
-      roles: ["formbuilder-admin", "super admin"], // ✅ allowed roles
+      roles: ["formbuilder-admin", "super admin"],
     },
     {
       href: "/bookorder",
       label: "Submissions",
       icon: <ListOrdered className="h-4 w-4" />,
       match: (p: string) => p.startsWith("/bookorder"),
-      roles: ["submission-admin", "super admin"], // ✅ allowed roles
+      roles: ["submission-admin", "super admin"],
     },
   ]
 
-  // Filter visible items by role
-  const visibleItems = user
+  // ✅ Filter visible items by role
+  const visibleItems = user?.role
     ? allItems.filter((item) => item.roles.includes(user.role))
     : []
 
+  // ✅ Use NextAuth signOut instead of manual API call
   async function handleLogout() {
     setIsLoggingOut(true)
     try {
-      await fetch("/api/auth/logout", { method: "POST" })
       localStorage.removeItem("admin-ui-forms")
+      await signOut({ redirect: false })
       router.push("/")
     } catch (error) {
       console.error("Logout error:", error)
@@ -114,6 +101,20 @@ export function Sidebar() {
   }
 
   const currentTheme = (theme as "light" | "dark" | "system") || "system"
+
+  // ✅ Show loading state while checking session
+  if (status === "loading") {
+    return (
+      <aside className="md:sticky md:top-0 h-dvh md:h-[100dvh] w-64 flex flex-col border-r bg-background overflow-y-auto">
+        <div className="flex items-center justify-center h-full">
+          <div className="text-center">
+            <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+            <p className="text-sm text-muted-foreground">Loading...</p>
+          </div>
+        </div>
+      </aside>
+    )
+  }
 
   return (
     <aside className="md:sticky md:top-0 h-dvh md:h-[100dvh] w-64 flex flex-col border-r bg-background overflow-y-auto">
@@ -148,7 +149,7 @@ export function Sidebar() {
           {/* Show message if user has no access */}
           {user && visibleItems.length === 0 && (
             <div className="p-3 text-sm text-destructive bg-destructive/10 rounded-md">
-              You don’t have access to any admin sections.
+              You don't have access to any admin sections.
             </div>
           )}
         </ul>
@@ -191,7 +192,7 @@ export function Sidebar() {
             <div className="p-3 rounded-md text-sm">
               <p className="font-medium">{user.name}</p>
               <p className="text-xs text-muted-foreground capitalize">
-                {user.role}
+                {user?.role}
               </p>
             </div>
           </div>
