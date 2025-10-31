@@ -4,7 +4,7 @@ import type { Metadata } from "next"
 // import { GeistMono } from "geist/font/mono"
 import { Analytics } from "@vercel/analytics/next"
 import "./globals.css"
-import { ThemeProvider } from "./utils/ThemeProvider"
+import { ThemeProvider } from "@/components/theme-provider"
 import { Suspense } from "react"
 import { Providers } from "./providers"
 
