@@ -131,7 +131,7 @@ const Sidebar = ({ onLogout }) => {
                   }`}
                 >
                   <div 
-                    className={`${isExpanded ? "mr-3 h-10 w-10" : "mx-auto w-10 h-10"} rounded-md bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white font-bold`}
+                    className={`${isExpanded ? "mr-3 h-10 w-10" : "mx-auto w-10 h-10"} rounded-md bg-linear-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white font-bold`}
                   >
                   
                    <MdOutlineDashboard size={22} />
@@ -151,7 +151,7 @@ const Sidebar = ({ onLogout }) => {
                   }`}
                 >
                   <div 
-                    className={`${isExpanded ? "mr-3 h-10 w-10" : "mx-auto w-10 h-10"} rounded-md bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white font-bold`}
+                    className={`${isExpanded ? "mr-3 h-10 w-10" : "mx-auto w-10 h-10"} rounded-md bg-linear-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white font-bold`}
                   >
                     {book.name.charAt(0)}
                   </div>

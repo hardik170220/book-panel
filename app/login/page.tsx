@@ -58,13 +58,13 @@ const APDashboardLogin: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-800 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-linear-to-br from-gray-900 via-black to-gray-800 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         {/* Main Login Card */}
         <div className="bg-white rounded-2xl shadow-2xl overflow-hidden">
           {/* Header Section */}
           <div className="bg-black text-white p-8 text-center relative overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-r from-gray-800 to-black opacity-90"></div>
+            <div className="absolute inset-0 bg-linear-to-r from-gray-800 to-black opacity-90"></div>
             <div className="relative z-10">
               <div className="w-14 h-14 bg-white rounded-full flex items-center justify-center mx-auto mb-4">
                <img src="/logo.png" className='h-12' alt="AP" />

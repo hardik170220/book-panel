@@ -191,7 +191,7 @@ function FormCard({ form }) {
             />
           </div>
         ) : (
-          <div className="w-full h-48 rounded-lg bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center mb-4">
+          <div className="w-full h-48 rounded-lg bg-linear-to-br from-blue-50 to-indigo-100 flex items-center justify-center mb-4">
             <FileText className="h-16 w-16 text-blue-400" />
           </div>
         )}

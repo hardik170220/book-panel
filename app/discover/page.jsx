@@ -93,10 +93,10 @@ const Carousel3D = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center p-4 overflow-hidden">
+    <div className="min-h-screen bg-linear-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center p-4 overflow-hidden">
       <div className="w-full max-w-7xl">
         <h1 className="text-4xl md:text-6xl font-bold text-white text-center mb-8 md:mb-16">
-          <span className="bg-gradient-to-r from-cyan-400 to-purple-400 bg-clip-text text-transparent">
+          <span className="bg-linear-to-r from-cyan-400 to-purple-400 bg-clip-text text-transparent">
             3D Carousel Gallery
           </span>
         </h1>
@@ -110,14 +110,14 @@ const Carousel3D = () => {
                 <div className="relative w-full h-full rounded-2xl overflow-hidden shadow-2xl group">
                   <img src={image.url} alt={image.title} className="w-full h-full object-cover" />
                   
-                  <div className={`absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent ${position === 'center' ? 'opacity-100' : 'opacity-0'} transition-opacity duration-500`}>
+                  <div className={`absolute inset-0 bg-linear-to-t from-black/80 via-black/20 to-transparent ${position === 'center' ? 'opacity-100' : 'opacity-0'} transition-opacity duration-500`}>
                     <div className="absolute bottom-0 left-0 right-0 p-6">
                       <h3 className="text-2xl md:text-3xl font-bold text-white mb-2">{image.title}</h3>
                       <p className="text-gray-300 text-sm md:text-base">{image.description}</p>
                     </div>
                   </div>
 
-                  <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+                  <div className="absolute inset-0 bg-linear-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
                 </div>
               </div>
             );
@@ -131,7 +131,7 @@ const Carousel3D = () => {
 
           <div className="flex gap-3">
             {images.map((_, index) => (
-              <button key={index} onClick={() => goToSlide(index)} disabled={isAnimating} className={`transition-all duration-300 rounded-full ${index === currentIndex ? 'w-12 h-3 bg-gradient-to-r from-cyan-400 to-purple-400' : 'w-3 h-3 bg-white/30 hover:bg-white/50'} disabled:cursor-not-allowed`} />
+              <button key={index} onClick={() => goToSlide(index)} disabled={isAnimating} className={`transition-all duration-300 rounded-full ${index === currentIndex ? 'w-12 h-3 bg-linear-to-r from-cyan-400 to-purple-400' : 'w-3 h-3 bg-white/30 hover:bg-white/50'} disabled:cursor-not-allowed`} />
             ))}
           </div>
 

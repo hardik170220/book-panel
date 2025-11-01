@@ -366,8 +366,8 @@ const Dashboard = () => {
           <div
             className={`${
               isDark
-                ? "bg-gradient-to-br from-blue-900 to-blue-800"
-                : "bg-gradient-to-br from-blue-500 to-blue-600"
+                ? "bg-linear-to-br from-blue-900 to-blue-800"
+                : "bg-linear-to-br from-blue-500 to-blue-600"
             } rounded-xl p-5 shadow-lg transform hover:scale-105 transition-transform duration-200`}
           >
             <div className="flex items-center justify-between mb-3">
@@ -392,8 +392,8 @@ const Dashboard = () => {
           <div
             className={`${
               isDark
-                ? "bg-gradient-to-br from-green-900 to-green-800"
-                : "bg-gradient-to-br from-green-500 to-green-600"
+                ? "bg-linear-to-br from-green-900 to-green-800"
+                : "bg-linear-to-br from-green-500 to-green-600"
             } rounded-xl p-5 shadow-lg transform hover:scale-105 transition-transform duration-200`}
           >
             <div className="flex items-center justify-between mb-3">
@@ -416,8 +416,8 @@ const Dashboard = () => {
           <div
             className={`${
               isDark
-                ? "bg-gradient-to-br from-yellow-900 to-yellow-800"
-                : "bg-gradient-to-br from-yellow-500 to-yellow-600"
+                ? "bg-linear-to-br from-yellow-900 to-yellow-800"
+                : "bg-linear-to-br from-yellow-500 to-yellow-600"
             } rounded-xl p-5 shadow-lg transform hover:scale-105 transition-transform duration-200`}
           >
             <div className="flex items-center justify-between mb-3">
@@ -442,8 +442,8 @@ const Dashboard = () => {
           <div
             className={`${
               isDark
-                ? "bg-gradient-to-br from-purple-900 to-purple-800"
-                : "bg-gradient-to-br from-purple-500 to-purple-600"
+                ? "bg-linear-to-br from-purple-900 to-purple-800"
+                : "bg-linear-to-br from-purple-500 to-purple-600"
             } rounded-xl p-5 shadow-lg transform hover:scale-105 transition-transform duration-200`}
           >
             <div className="flex items-center justify-between mb-3">
@@ -468,8 +468,8 @@ const Dashboard = () => {
           <div
             className={`${
               isDark
-                ? "bg-gradient-to-br from-pink-900 to-pink-800"
-                : "bg-gradient-to-br from-pink-500 to-pink-600"
+                ? "bg-linear-to-br from-pink-900 to-pink-800"
+                : "bg-linear-to-br from-pink-500 to-pink-600"
             } rounded-xl p-5 shadow-lg transform hover:scale-105 transition-transform duration-200`}
           >
             <div className="flex items-center justify-between mb-3">
@@ -503,8 +503,8 @@ const Dashboard = () => {
               <div
                 className={`${
                   isDark
-                    ? "bg-gradient-to-br from-orange-600 to-orange-700"
-                    : "bg-gradient-to-br from-orange-500 to-orange-600"
+                    ? "bg-linear-to-br from-orange-600 to-orange-700"
+                    : "bg-linear-to-br from-orange-500 to-orange-600"
                 } p-3 rounded-xl shadow-lg`}
               >
                 <FaCrown className="text-white text-2xl" />
@@ -539,11 +539,11 @@ const Dashboard = () => {
                     <div
                       className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-white text-lg ${
                         index === 0
-                          ? "bg-gradient-to-br from-yellow-400 to-yellow-600"
+                          ? "bg-linear-to-br from-yellow-400 to-yellow-600"
                           : index === 1
-                          ? "bg-gradient-to-br from-gray-300 to-gray-500"
+                          ? "bg-linear-to-br from-gray-300 to-gray-500"
                           : index === 2
-                          ? "bg-gradient-to-br from-orange-400 to-orange-600"
+                          ? "bg-linear-to-br from-orange-400 to-orange-600"
                           : isDark
                           ? "bg-gray-600"
                           : "bg-gray-300"
@@ -635,8 +635,8 @@ const Dashboard = () => {
                 <div
                   className={`${
                     isDark
-                      ? "bg-gradient-to-br from-cyan-900 to-cyan-800"
-                      : "bg-gradient-to-br from-cyan-500 to-cyan-600"
+                      ? "bg-linear-to-br from-cyan-900 to-cyan-800"
+                      : "bg-linear-to-br from-cyan-500 to-cyan-600"
                   } p-4 rounded-xl shadow-lg`}
                 >
                   <FaClipboardList className="text-white text-3xl" />

@@ -19,7 +19,7 @@ import * as XLSX from "xlsx";
 import * as pdfMake from "pdfmake/build/pdfmake";
 import { useTheme } from "../../app/utils/ThemeProvider";
 import { generateShippingLabelsPDF } from "../../app/utils/shpping-label-generator";
-import { signOut } from "next-auth/react";
+import { signOut, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
@@ -30,8 +30,6 @@ const Header = ({
   filterDeliveryType,
   setFilterDeliveryType,
   filteredRecords,
-  userName = "User",
-  userRole = "Admin",
   onFilterClick,
   activeFilterCount = 0
 }) => {
@@ -46,6 +44,10 @@ const Header = ({
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const { theme, toggleTheme } = useTheme();
   const router = useRouter();
+  
+  // ✅ Use NextAuth session to get user info
+  const { data: session, status } = useSession();
+  const user = session?.user;
   
   const bookMenuRef = useRef(null);
   const exportMenuRef = useRef(null);
@@ -495,15 +497,18 @@ const Header = ({
                       </a>
 
                       {/* go to the form builder */}
-                      <a
-                        href="/admin/forms"
-                        className={`flex items-center gap-3 px-4 py-3 text-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors ${
-                          isRecentOrdersPage ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 font-medium' : 'text-gray-700 dark:text-gray-300'
-                        }`}
-                      >
-                        <MdLibraryAdd size={20} />
-                        <span>Create a form</span>
-                      </a>
+                      {/* ✅ Show "Create a form" only for authorized roles */}
+                      {user && (user.role === "super admin" || user.role === "formbuilder-admin") && (
+                        <a
+                          href="/admin/forms"
+                          className={`flex items-center gap-3 px-4 py-3 text-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors ${
+                            pathname === '/admin/forms' ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 font-medium' : 'text-gray-700 dark:text-gray-300'
+                          }`}
+                        >
+                          <MdLibraryAdd size={20} />
+                          <span>Create a form</span>
+                        </a>
+                      )}
 
                       {/* Divider */}
                       <div className="border-t border-gray-200 dark:border-gray-700 my-1"></div>
@@ -522,7 +527,7 @@ const Header = ({
                               currentBook === book.id ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 font-medium' : 'text-gray-700 dark:text-gray-300'
                             }`}
                           >
-                            <div className="w-7 h-7 rounded-md bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                            <div className="w-7 h-7 rounded-md bg-linear-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
                               {book.name.charAt(0)}
                             </div>
                             <span className="truncate">{book.name}</span>
@@ -708,7 +713,6 @@ const Header = ({
 };
 
 export default Header;
-
 
 
 // import React, { useState } from "react";
