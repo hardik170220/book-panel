@@ -4,51 +4,44 @@ import { useRouter } from "next/navigation"
 import { FormsList } from "@/components/admin/forms-list"
 import { useFormsStore } from "@/components/admin/use-forms-store"
 import Link from "next/link"
-import { useEffect, useState } from "react"
+import { useEffect } from "react"
+import { useSession } from "next-auth/react"
 
 export default function FormsPage() {
   const router = useRouter()
   const { forms, deleteForm, toggleActive } = useFormsStore()
-  const [user, setUser] = useState<{ name: string; role: string } | null>(null)
-  const [loading, setLoading] = useState(true)
+  
+  // ✅ Use NextAuth session instead of manual fetch
+  const { data: session, status } = useSession()
+  const user = session?.user
 
-  // Fetch user info
+  // ✅ Redirect unauthorized users to access-denied
   useEffect(() => {
-    async function fetchUser() {
-      try {
-        const res = await fetch("/api/whoami")
-        if (res.ok) {
-          const data = await res.json()
-          setUser({ name: data.name, role: data.role })
-        } else {
-          setUser(null)
-        }
-      } catch (err) {
-        console.error("Failed to fetch user:", err)
-        setUser(null)
-      } finally {
-        setLoading(false)
+    if (status === "authenticated" && user) {
+      if (user.role !== "formbuilder-admin" && user.role !== "super admin") {
+        router.replace("/access-denied")
       }
     }
-    fetchUser()
-  }, [])
+  }, [user, status, router])
 
-  useEffect(() => {
-    if (!loading && user && user.role !== "formbuilder-admin" && user.role !== "super admin") {
-      router.replace("/access-denied")
-    }
-  }, [user, loading, router])
-
-  if (loading) {
+  // ✅ Show loading state while checking session
+  if (status === "loading") {
     return (
       <div className="flex items-center justify-center h-64">
-        <p className="text-muted-foreground">Checking for permissions....</p>
+        <div className="text-center">
+          <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+          <p className="text-sm text-muted-foreground">Checking permissions...</p>
+        </div>
       </div>
     )
   }
 
-  // If user is not allowed (prevents flash)
-  if (!user || (user.role !== "formbuilder-admin" && user.role !== "super admin")) {
+  // ✅ If user is not authenticated or not allowed (prevents flash)
+  if (
+    status === "unauthenticated" ||
+    !user ||
+    (user.role !== "formbuilder-admin" && user.role !== "super admin")
+  ) {
     return null
   }
 
@@ -73,7 +66,6 @@ export default function FormsPage() {
     </>
   )
 }
-
 
 
 

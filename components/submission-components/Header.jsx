@@ -19,6 +19,8 @@ import * as XLSX from "xlsx";
 import * as pdfMake from "pdfmake/build/pdfmake";
 import { useTheme } from "../../app/utils/ThemeProvider";
 import { generateShippingLabelsPDF } from "../../app/utils/shpping-label-generator";
+import { signOut } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 
 const Header = ({
@@ -28,7 +30,6 @@ const Header = ({
   filterDeliveryType,
   setFilterDeliveryType,
   filteredRecords,
-  onLogout,
   userName = "User",
   userRole = "Admin",
   onFilterClick,
@@ -42,7 +43,9 @@ const Header = ({
   const [isBookMenuOpen, setIsBookMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const { theme, toggleTheme } = useTheme();
+  const router = useRouter();
   
   const bookMenuRef = useRef(null);
   const exportMenuRef = useRef(null);
@@ -125,9 +128,25 @@ const Header = ({
     setShowLogoutConfirm(true);
   };
   
-  const confirmLogout = () => {
-    setShowLogoutConfirm(false);
-    if (onLogout) onLogout();
+  const confirmLogout = async () => {
+    setIsLoggingOut(true);
+    try {
+      // Clear any local storage items
+      localStorage.removeItem("admin-ui-forms");
+      
+      // Sign out using NextAuth
+      await signOut({ redirect: false });
+      
+      // Redirect to home page
+      router.push("/");
+    } catch (error) {
+      console.error("Logout error:", error);
+      // Still redirect even if there's an error
+      router.push("/");
+    } finally {
+      setShowLogoutConfirm(false);
+      setIsLoggingOut(false);
+    }
   };
   
   const cancelLogout = () => {
@@ -475,8 +494,7 @@ const Header = ({
                         <span>All Recent Orders</span>
                       </a>
 
-
- {/* go to the form builder */}
+                      {/* go to the form builder */}
                       <a
                         href="/admin/forms"
                         className={`flex items-center gap-3 px-4 py-3 text-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors ${
@@ -628,15 +646,17 @@ const Header = ({
             <div className="px-6 py-4 bg-gray-50 dark:bg-gray-900/50 flex justify-end gap-3">
               <button
                 onClick={cancelLogout}
-                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                disabled={isLoggingOut}
+                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Cancel
               </button>
               <button
                 onClick={confirmLogout}
-                className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors shadow-sm"
+                disabled={isLoggingOut}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Logout
+                {isLoggingOut ? "Logging out..." : "Logout"}
               </button>
             </div>
           </div>
@@ -688,8 +708,6 @@ const Header = ({
 };
 
 export default Header;
-
-
 
 
 

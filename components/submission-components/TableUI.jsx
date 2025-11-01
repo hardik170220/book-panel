@@ -21,7 +21,7 @@ const TableUI = ({
   onRowClick = null,
   onMarkDelivered = null,
 }) => {
-  console.log("TableUI data:", data);
+  // console.log("TableUI data:", data);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(defaultItemsPerPage);

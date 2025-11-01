@@ -19,15 +19,7 @@
 // import { useAuth } from "@/app/context/AuthContext";
 
 // // Firebase configuration
-// const firebaseConfig = {
-//   apiKey: "AIzaSyACrGWyxECC54LJO6ugvYkvnO97ZhU7HzU",
-//   authDomain: "adhyatm-parivar-main.firebaseapp.com",
-//   projectId: "adhyatm-parivar-main",
-//   storageBucket: "adhyatm-parivar-main.appspot.com",
-//   messagingSenderId: "871474934725",
-//   appId: "1:871474934725:web:859fc36916a3b7dc7651ac",
-//   measurementId: "G-6NM5J8DXM8",
-// };
+// ************************************ enter config
 
 // const app = initializeApp(firebaseConfig);
 // const db = getFirestore(app);
@@ -762,13 +754,13 @@ import TableUI from "../submission-components/TableUI";
 
 // Firebase configuration
 const firebaseConfig = {
-  apiKey: "AIzaSyACrGWyxECC54LJO6ugvYkvnO97ZhU7HzU",
-  authDomain: "adhyatm-parivar-main.firebaseapp.com",
-  projectId: "adhyatm-parivar-main",
-  storageBucket: "adhyatm-parivar-main.appspot.com",
-  messagingSenderId: "871474934725",
-  appId: "1:871474934725:web:859fc36916a3b7dc7651ac",
-  measurementId: "G-6NM5J8DXM8",
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
 };
 
 const app = initializeApp(firebaseConfig);
