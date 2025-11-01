@@ -435,7 +435,7 @@ const Header = ({
             {/* Logo and Book Selector */}
             <div className="flex items-center gap-3 flex-1 min-w-0">
               {/* Logo */}
-              <Link href='/' className="">
+              <Link href='/bookorder' className="">
                 <img src="/logo.png" className="w-8" alt="Logo" />
               </Link>
             </div>
@@ -476,7 +476,7 @@ const Header = ({
                     <div className="max-h-72 overflow-y-auto custom-scrollbar">
                       {/* Dashboard */}
                       <a
-                        href="/"
+                        href="/bookorder"
                         className={`flex items-center gap-3 px-4 py-3 text-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors ${
                           isDashboardPage ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 font-medium' : 'text-gray-700 dark:text-gray-300'
                         }`}
@@ -498,7 +498,7 @@ const Header = ({
 
                       {/* go to the form builder */}
                       {/* ✅ Show "Create a form" only for authorized roles */}
-                      {user && (user.role === "super admin" || user.role === "formbuilder-admin") && (
+                      {user && (user.role === "super admin") && (
                         <a
                           href="/admin/forms"
                           className={`flex items-center gap-3 px-4 py-3 text-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors ${

@@ -117,7 +117,7 @@ export function Sidebar() {
   }
 
   return (
-    <aside className="md:sticky md:top-0 h-dvh md:h-[100dvh] w-64 flex flex-col border-r bg-background overflow-y-auto">
+    <aside className="md:sticky md:top-0 font-poppins h-dvh md:h-[100dvh] w-64 flex flex-col border-r bg-background overflow-y-auto">
       <div className="px-4 py-4">
         <div className="text-xl font-semibold">AP Form</div>
         <p className="text-sm text-muted-foreground">Manage forms & data</p>
