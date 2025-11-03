@@ -48,23 +48,24 @@ export default withAuth(
     const { pathname } = req.nextUrl
     const role = req.nextauth.token?.role
 
+    // Redirect submission-admin trying to access non-bookorder admin routes
     if (
-  pathname.startsWith("/admin") &&
-  !pathname.startsWith("/admin/bookorder") &&
-  role === "submission-admin"
-) {
-  const url = new URL("/admin/bookorder", req.url)
-  return NextResponse.redirect(url)
-}
+      pathname.startsWith("/admin") &&
+      !pathname.startsWith("/admin/bookorder") &&
+      role === "submission-admin"
+    ) {
+      const url = new URL("/admin/bookorder", req.url)
+      return NextResponse.redirect(url)
+    }
 
-
-    // Access control
+    // Access control for forms and dashboard
     if (pathname.startsWith("/admin/forms") || pathname.startsWith("/admin/dashboard")) {
       if (role !== "formbuilder-admin" && role !== "super admin") {
         return NextResponse.redirect(new URL("/access-denied", req.url))
       }
     }
 
+    // Access control for bookorder
     if (pathname.startsWith("/admin/bookorder")) {
       if (role !== "submission-admin" && role !== "super admin") {
         return NextResponse.redirect(new URL("/access-denied", req.url))
@@ -76,6 +77,9 @@ export default withAuth(
   {
     callbacks: {
       authorized: ({ token }) => !!token,
+    },
+    pages: {
+      signIn: "/login", // Your login page path
     },
   }
 )

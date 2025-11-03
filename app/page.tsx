@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import { Eye, EyeOff, Lock, Mail } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { signIn, useSession } from "next-auth/react";
 
 interface FormData {
@@ -21,27 +21,48 @@ const APDashboardLogin: React.FC = () => {
   const [error, setError] = useState<string>("");
 
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { data: session, status } = useSession();
 
-  // ✅ If already logged in, redirect based on role
+  // ✅ Get the callback URL (where user was trying to go)
+  const callbackUrl = searchParams.get("callbackUrl") || null;
+
+  // ✅ If already logged in, redirect based on role and callback
   useEffect(() => {
     if (status === "authenticated" && session?.user?.role) {
-      if (session.user.role === "submission-admin") {
-        router.replace("/admin/bookorder");
+      // If there's a callback URL, redirect there instead
+      if (callbackUrl) {
+        router.replace(callbackUrl);
       } else {
-        console.log("Redirecting to /admin/dashboard");
-        router.replace("/admin/dashboard");
+        // Default redirects based on role
+        if (session.user.role === "submission-admin") {
+          router.replace("/admin/bookorder");
+        } else {
+          router.replace("/admin/dashboard");
+        }
       }
     }
-  }, [status, session, router]);
+  }, [status, session, router, callbackUrl]);
 
   // ✅ Show nothing while checking session (avoids flicker)
-  if (status === "loading" || (status === "authenticated" && !session?.user?.role)) {
+  if (status === "loading") {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-900 text-white">
         <div className="text-center">
           <div className="w-8 h-8 border-2 border-white border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
           Checking session...
+        </div>
+      </div>
+    );
+  }
+
+  // ✅ If authenticated but role not loaded yet, show loading
+  if (status === "authenticated" && !session?.user?.role) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-900 text-white">
+        <div className="text-center">
+          <div className="w-8 h-8 border-2 border-white border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
+          Loading user data...
         </div>
       </div>
     );
@@ -71,16 +92,22 @@ const APDashboardLogin: React.FC = () => {
       if (result?.error) {
         setError("Invalid email or password. Please try again.");
       } else {
-        // ✅ Fetch the latest session to get role
-        setTimeout(async () => {
-          const res = await fetch("/api/auth/session");
-          const newSession = await res.json();
-          if (newSession?.user?.role === "submission-admin") {
-            router.push("/admin/bookorder");
-          } else {
-            router.push("/admin/dashboard");
-          }
-        }, 300);
+        // ✅ Wait for session to update, then redirect
+        // The useEffect will handle the redirect based on role and callbackUrl
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // Force session refresh
+        const res = await fetch("/api/auth/session");
+        const newSession = await res.json();
+        
+        // Redirect based on callback or role
+        if (callbackUrl) {
+          router.push(callbackUrl);
+        } else if (newSession?.user?.role === "submission-admin") {
+          router.push("/admin/bookorder");
+        } else {
+          router.push("/admin/dashboard");
+        }
       }
     } catch (err) {
       setError("An unexpected error occurred. Please try again.");
@@ -116,9 +143,6 @@ const APDashboardLogin: React.FC = () => {
                 <img src="/logo.png" className="h-12" alt="AP" />
               </div>
               <h1 className="text-2xl font-bold mb-2">Ap Book Panel</h1>
-              {/* <p className="text-gray-300 text-sm">
-                Access your administrative panel
-              </p> */}
             </div>
           </div>
 
@@ -194,8 +218,6 @@ const APDashboardLogin: React.FC = () => {
                   </button>
                 </div>
               </div>
-
-             
 
               {/* Submit Button */}
               <button
