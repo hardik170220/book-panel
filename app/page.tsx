@@ -23,24 +23,7 @@ const APDashboardLogin: React.FC = () => {
   const router = useRouter();
   const { data: session, status } = useSession();
 
-  // ✅ If already logged in, redirect based on role
-  useEffect(() => {
-  if (status === "authenticated") {
-    // Wait until session is fully populated
-    if (!session?.user?.role) return; // ❗ Do nothing until role is fetched
-
-    const redirectTimer = setTimeout(() => {
-      if (session.user.role === "submission-admin") {
-        router.replace("/admin/bookorder");
-      } else {
-        console.log("Redirecting to /admin/dashboard");
-        router.replace("/admin/dashboard");
-      }
-    }, 300); // slight buffer to ensure stability in prod
-
-    return () => clearTimeout(redirectTimer);
-  }
-}, [status, session, router]);
+  
 
 
   // ✅ Show nothing while checking session (avoids flicker)
