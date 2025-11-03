@@ -445,7 +445,7 @@ const Dashboard = () => {
               </div>
               <div>
                 <h3 className="text-xl font-bold text-foreground">
-                  Top 10 Customers
+                 Our Frequent Readers
                 </h3>
                 <p className="text-sm text-muted-foreground">
                   Customers with 5 or more orders
