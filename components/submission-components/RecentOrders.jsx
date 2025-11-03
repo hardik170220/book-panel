@@ -4,24 +4,11 @@ import {
   FaShoppingBag,
   FaTruck,
   FaClock,
-  FaUser,
-  FaPhone,
-  FaMapMarkerAlt,
-  FaBook,
-  FaCalendarAlt,
-  FaSpinner,
-  FaArrowLeft,
-  FaSun,
-  FaMoon,
-  FaChartLine,
   FaChevronLeft,
   FaChevronRight,
 } from "react-icons/fa";
 import { initializeApp } from "firebase/app";
 import { getFirestore, collection, getDocs } from "firebase/firestore";
-import { useTheme } from "../../app/utils/ThemeProvider";
-// import Sidebar from "./Sidebar";
-// import Link from "next/link";
 import Header from "./Header";
 
 // Firebase configuration
@@ -47,19 +34,11 @@ try {
 }
 
 // Loading Skeleton Component
-const TableSkeleton = ({ isDark, rowCount = 10 }) => {
+const TableSkeleton = ({ rowCount = 10 }) => {
   return (
     <div className="overflow-x-auto custom-scrollbar">
-      <table
-        className={`w-full text-sm border-collapse table-auto ${
-          isDark ? "text-gray-300" : "text-gray-700"
-        }`}
-      >
-        <thead
-          className={`${
-            isDark ? "bg-gray-700 text-gray-200" : "bg-gray-100 text-gray-800"
-          }`}
-        >
+      <table className="w-full text-sm border-collapse table-auto text-foreground">
+        <thead className="bg-muted text-foreground">
           <tr>
             <th className="p-2 text-left whitespace-nowrap">Date</th>
             <th className="p-2 text-left whitespace-nowrap">Book</th>
@@ -67,74 +46,36 @@ const TableSkeleton = ({ isDark, rowCount = 10 }) => {
             <th className="p-2 text-left whitespace-nowrap">Phone</th>
             <th className="p-2 text-left whitespace-nowrap">Address</th>
             <th className="p-2 text-left whitespace-nowrap">Status</th>
-            
             <th className="p-2 text-left whitespace-nowrap">Tracking ID</th>
             <th className="p-2 text-left whitespace-nowrap">Qty</th>
           </tr>
         </thead>
         <tbody>
           {[...Array(rowCount)].map((_, index) => (
-            <tr
-              key={index}
-              className={`border-b ${
-                isDark ? "border-gray-600" : "border-gray-200"
-              }`}
-            >
+            <tr key={index} className="border-b border-border">
               <td className="p-2">
-                <div
-                  className={`h-4 rounded ${
-                    isDark ? "bg-gray-600" : "bg-gray-200"
-                  } animate-pulse w-24`}
-                />
+                <div className="h-4 rounded bg-muted animate-pulse w-24" />
               </td>
               <td className="p-2">
-                <div
-                  className={`h-4 rounded ${
-                    isDark ? "bg-gray-600" : "bg-gray-200"
-                  } animate-pulse w-32`}
-                />
+                <div className="h-4 rounded bg-muted animate-pulse w-32" />
               </td>
               <td className="p-2">
-                <div
-                  className={`h-4 rounded ${
-                    isDark ? "bg-gray-600" : "bg-gray-200"
-                  } animate-pulse w-28`}
-                />
+                <div className="h-4 rounded bg-muted animate-pulse w-28" />
               </td>
               <td className="p-2">
-                <div
-                  className={`h-4 rounded ${
-                    isDark ? "bg-gray-600" : "bg-gray-200"
-                  } animate-pulse w-48`}
-                />
+                <div className="h-4 rounded bg-muted animate-pulse w-48" />
               </td>
               <td className="p-2">
-                <div
-                  className={`h-6 rounded-full ${
-                    isDark ? "bg-gray-600" : "bg-gray-200"
-                  } animate-pulse w-20`}
-                />
+                <div className="h-6 rounded-full bg-muted animate-pulse w-20" />
               </td>
               <td className="p-2">
-                <div
-                  className={`h-4 rounded ${
-                    isDark ? "bg-gray-600" : "bg-gray-200"
-                  } animate-pulse w-20`}
-                />
+                <div className="h-4 rounded bg-muted animate-pulse w-20" />
               </td>
               <td className="p-2">
-                <div
-                  className={`h-4 rounded ${
-                    isDark ? "bg-gray-600" : "bg-gray-200"
-                  } animate-pulse w-24`}
-                />
+                <div className="h-4 rounded bg-muted animate-pulse w-24" />
               </td>
               <td className="p-2">
-                <div
-                  className={`h-4 rounded ${
-                    isDark ? "bg-gray-600" : "bg-gray-200"
-                  } animate-pulse w-8 mx-auto`}
-                />
+                <div className="h-4 rounded bg-muted animate-pulse w-8 mx-auto" />
               </td>
             </tr>
           ))}
@@ -145,7 +86,7 @@ const TableSkeleton = ({ isDark, rowCount = 10 }) => {
 };
 
 // Pagination Component
-const Pagination = ({ currentPage, totalPages, onPageChange, isDark }) => {
+const Pagination = ({ currentPage, totalPages, onPageChange }) => {
   const getPageNumbers = () => {
     const pages = [];
     const maxVisible = 5;
@@ -179,7 +120,7 @@ const Pagination = ({ currentPage, totalPages, onPageChange, isDark }) => {
 
   return (
     <div className="flex items-center justify-between mt-6 flex-wrap gap-4">
-      <div className={`text-sm ${isDark ? "text-gray-400" : "text-gray-600"}`}>
+      <div className="text-sm text-muted-foreground">
         Showing page {currentPage} of {totalPages}
       </div>
 
@@ -189,12 +130,8 @@ const Pagination = ({ currentPage, totalPages, onPageChange, isDark }) => {
           disabled={currentPage === 1}
           className={`p-2 rounded-lg transition-colors ${
             currentPage === 1
-              ? isDark
-                ? "bg-gray-700 text-gray-500 cursor-not-allowed"
-                : "bg-gray-100 text-gray-400 cursor-not-allowed"
-              : isDark
-              ? "bg-gray-700 text-gray-300 hover:bg-gray-600"
-              : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              ? "bg-muted text-muted-foreground cursor-not-allowed"
+              : "bg-muted text-foreground hover:bg-muted/80"
           }`}
         >
           <FaChevronLeft />
@@ -207,16 +144,10 @@ const Pagination = ({ currentPage, totalPages, onPageChange, isDark }) => {
             disabled={page === "..."}
             className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
               page === currentPage
-                ? isDark
-                  ? "bg-blue-600 text-white"
-                  : "bg-blue-500 text-white"
+                ? "bg-blue-600 text-white"
                 : page === "..."
-                ? isDark
-                  ? "text-gray-500 cursor-default"
-                  : "text-gray-400 cursor-default"
-                : isDark
-                ? "bg-gray-700 text-gray-300 hover:bg-gray-600"
-                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                ? "text-muted-foreground cursor-default"
+                : "bg-muted text-foreground hover:bg-muted/80"
             }`}
           >
             {page}
@@ -228,12 +159,8 @@ const Pagination = ({ currentPage, totalPages, onPageChange, isDark }) => {
           disabled={currentPage === totalPages}
           className={`p-2 rounded-lg transition-colors ${
             currentPage === totalPages
-              ? isDark
-                ? "bg-gray-700 text-gray-500 cursor-not-allowed"
-                : "bg-gray-100 text-gray-400 cursor-not-allowed"
-              : isDark
-              ? "bg-gray-700 text-gray-300 hover:bg-gray-600"
-              : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              ? "bg-muted text-muted-foreground cursor-not-allowed"
+              : "bg-muted text-foreground hover:bg-muted/80"
           }`}
         >
           <FaChevronRight />
@@ -243,11 +170,7 @@ const Pagination = ({ currentPage, totalPages, onPageChange, isDark }) => {
       <select
         value={currentPage}
         onChange={(e) => onPageChange(Number(e.target.value))}
-        className={`px-3 py-2 rounded-lg text-sm ${
-          isDark
-            ? "bg-gray-700 text-gray-300 border-gray-600"
-            : "bg-white text-gray-700 border-gray-300"
-        } border`}
+        className="px-3 py-2 rounded-lg text-sm bg-background text-foreground border border-border"
       >
         {[...Array(totalPages)].map((_, i) => (
           <option key={i + 1} value={i + 1}>
@@ -267,9 +190,6 @@ const RecentOrdersPage = () => {
   const [error, setError] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [ordersPerPage, setOrdersPerPage] = useState(15);
-  const { theme, toggleTheme } = useTheme();
-
-  const isDark = theme === "dark";
 
   useEffect(() => {
     loadCollectionsAndOrders();
@@ -419,9 +339,9 @@ const RecentOrdersPage = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen flex mt-10 items-center justify-center bg-gray-50 dark:bg-gray-900">
-        <div className="bg-red-100 dark:bg-red-900 p-8 rounded-xl shadow-lg max-w-md">
-          <h2 className="text-xl font-bold text-red-800 dark:text-red-200 mb-2">
+      <div className="min-h-screen flex mt-10 items-center justify-center bg-background">
+        <div className="bg-red-100 dark:bg-red-900/20 p-8 rounded-xl shadow-lg max-w-md">
+          <h2 className="text-xl font-bold text-red-800 dark:text-red-400 mb-2">
             Error Loading Orders
           </h2>
           <p className="text-red-700 dark:text-red-300 mb-4">{error}</p>
@@ -437,33 +357,19 @@ const RecentOrdersPage = () => {
   }
 
   return (
-    <div
-      className={`min-h-screen mt-16 ${
-        isDark ? "bg-gray-900" : "bg-gray-50"
-      } transition-colors duration-200`}
-    >
-     
-
-      <Header  />
+    <div className="min-h-screen mt-16 bg-background transition-colors duration-200">
+      <Header />
 
       <div className="p-2 md:p-4">
-        <div
-          className={`${
-            isDark ? "bg-gray-800" : "bg-white"
-          } rounded-md shadow-lg p-4`}
-        >
+        <div className="bg-card rounded-md shadow-lg p-4">
           {/* Filter Buttons */}
           <div className="flex flex-wrap gap-2 mb-6">
             <button
               onClick={() => setSelectedFilter("all")}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                 selectedFilter === "all"
-                  ? isDark
-                    ? "bg-blue-600 text-white"
-                    : "bg-blue-500 text-white"
-                  : isDark
-                  ? "bg-gray-700 text-gray-300 hover:bg-gray-600"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  ? "bg-blue-600 text-white"
+                  : "bg-muted text-foreground hover:bg-muted/80"
               }`}
             >
               All Orders ({stats.total})
@@ -472,12 +378,8 @@ const RecentOrdersPage = () => {
               onClick={() => setSelectedFilter("shipped")}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                 selectedFilter === "shipped"
-                  ? isDark
-                    ? "bg-green-600 text-white"
-                    : "bg-green-500 text-white"
-                  : isDark
-                  ? "bg-gray-700 text-gray-300 hover:bg-gray-600"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  ? "bg-green-600 text-white"
+                  : "bg-muted text-foreground hover:bg-muted/80"
               }`}
             >
               <FaTruck className="inline mr-1" />
@@ -487,12 +389,8 @@ const RecentOrdersPage = () => {
               onClick={() => setSelectedFilter("pending")}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                 selectedFilter === "pending"
-                  ? isDark
-                    ? "bg-yellow-600 text-white"
-                    : "bg-yellow-500 text-white"
-                  : isDark
-                  ? "bg-gray-700 text-gray-300 hover:bg-gray-600"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  ? "bg-yellow-600 text-white"
+                  : "bg-muted text-foreground hover:bg-muted/80"
               }`}
             >
               <FaClock className="inline mr-1" />
@@ -501,20 +399,14 @@ const RecentOrdersPage = () => {
 
             {/* Orders per page selector */}
             <div className="ml-auto flex items-center gap-2">
-              <span className={`text-sm ${isDark ? "text-gray-400" : "text-gray-600"}`}>
-                Show:
-              </span>
+              <span className="text-sm text-muted-foreground">Show:</span>
               <select
                 value={ordersPerPage}
                 onChange={(e) => {
                   setOrdersPerPage(Number(e.target.value));
                   setCurrentPage(1);
                 }}
-                className={`px-3 py-2 rounded-lg text-sm ${
-                  isDark
-                    ? "bg-gray-700 text-gray-300 border-gray-600"
-                    : "bg-gray-100 text-gray-700 border-gray-300"
-                } border`}
+                className="px-3 py-2 rounded-lg text-sm bg-muted text-foreground border border-border"
               >
                 <option value={10}>10</option>
                 <option value={15}>15</option>
@@ -527,16 +419,12 @@ const RecentOrdersPage = () => {
 
           {/* Orders List or Skeleton */}
           {isLoading ? (
-            <TableSkeleton isDark={isDark} rowCount={ordersPerPage} />
+            <TableSkeleton rowCount={ordersPerPage} />
           ) : (
             <>
               <div className="overflow-x-auto custom-scrollbar">
                 {currentOrders.length === 0 ? (
-                  <div
-                    className={`text-center py-12 ${
-                      isDark ? "text-gray-400" : "text-gray-500"
-                    }`}
-                  >
+                  <div className="text-center py-12 text-muted-foreground">
                     <FaShoppingBag className="mx-auto text-4xl mb-3 opacity-50" />
                     <p className="text-lg">No orders found</p>
                     <p className="text-sm mt-2">
@@ -544,28 +432,19 @@ const RecentOrdersPage = () => {
                     </p>
                   </div>
                 ) : (
-                  <table
-                    className={`w-full text-sm border-collapse table-auto ${
-                      isDark ? "text-gray-300" : "text-gray-700"
-                    }`}
-                  >
-                    <thead
-                      className={`${
-                        isDark
-                          ? "bg-gray-700 text-gray-200"
-                          : "bg-gray-100 text-gray-800"
-                      }`}
-                    >
+                  <table className="w-full text-sm border-collapse table-auto text-foreground">
+                    <thead className="bg-muted text-foreground">
                       <tr>
                         <th className="p-2 text-left whitespace-nowrap">Date</th>
                         <th className="p-2 text-left whitespace-nowrap">Book</th>
                         <th className="p-2 text-left whitespace-nowrap">Name</th>
                         <th className="p-2 text-left whitespace-nowrap">Phone</th>
-                        <th style={{ width: '200px' }} className="p-2 text-left whitespace-nowrap">Address</th>
+                        <th style={{ width: '200px' }} className="p-2 text-left whitespace-nowrap">
+                          Address
+                        </th>
                         <th className="p-2 text-left whitespace-nowrap">City & Pincode</th>
                         <th className="p-2 text-left whitespace-nowrap">State</th>
                         <th className="p-2 text-left whitespace-nowrap">Status</th>
-                        
                         <th className="p-2 text-left whitespace-nowrap">Tracking ID</th>
                         <th className="p-2 text-left whitespace-nowrap">Qty</th>
                       </tr>
@@ -574,21 +453,13 @@ const RecentOrdersPage = () => {
                       {currentOrders.map((order) => (
                         <tr
                           key={`${order.collectionName}-${order.id}`}
-                          className={`border-b ${
-                            isDark
-                              ? "border-gray-600 hover:bg-gray-700"
-                              : "border-gray-200 hover:bg-gray-50"
-                          } transition-colors duration-150`}
+                          className="border-b border-border hover:bg-muted/50 transition-colors duration-150"
                         >
-                           <td className="p-2 whitespace-nowrap text-green-700 font-bold align-middle">
+                          <td className="p-2 whitespace-nowrap text-green-700 dark:text-green-400 font-bold align-middle">
                             {formatDate(order.timestamp)}
                           </td>
                           <td className="p-2 whitespace-nowrap">
-                            <span
-                              className={`font-semibold ${
-                                isDark ? "text-blue-400" : "text-blue-600"
-                              }`}
-                            >
+                            <span className="font-semibold text-blue-600 dark:text-blue-400">
                               {order.bookName}
                             </span>
                           </td>
@@ -598,11 +469,12 @@ const RecentOrdersPage = () => {
                           <td className="p-2 whitespace-nowrap">
                             <span>{order.phone}</span>
                           </td>
-                          <td className="p-2 whitespace-normal align-middle" style={{ width: '200px', maxWidth: '200px' }}>
-  <span className="break-words">
-    {order.address}
-  </span>
-</td>
+                          <td
+                            className="p-2 whitespace-normal align-middle"
+                            style={{ width: '200px', maxWidth: '200px' }}
+                          >
+                            <span className="break-words">{order.address}</span>
+                          </td>
                           <td className="p-2 truncate align-middle">
                             <span className="truncate">
                               {order.city && ` ${order.city}`}
@@ -611,9 +483,7 @@ const RecentOrdersPage = () => {
                             </span>
                           </td>
                           <td className="p-2 truncate align-middle">
-                            <span className="truncate">
-                             {order.state && ` ${order.state}`}
-                            </span>
+                            <span className="truncate">{order.state && ` ${order.state}`}</span>
                           </td>
                           <td className="p-2 whitespace-nowrap align-middle">
                             <span
@@ -627,14 +497,9 @@ const RecentOrdersPage = () => {
                               {order.isShipped ? "Shipped" : "Pending"}
                             </span>
                           </td>
-                         
                           <td className="p-2 whitespace-nowrap align-middle">
                             {order.isShipped && order.parcelId ? (
-                              <code
-                                className={`px-2 py-1 rounded text-xs ${
-                                  isDark ? "bg-gray-600" : "bg-gray-200"
-                                }`}
-                              >
+                              <code className="px-2 py-1 rounded text-xs bg-muted">
                                 {order.parcelId}
                               </code>
                             ) : (
@@ -657,7 +522,6 @@ const RecentOrdersPage = () => {
                   currentPage={currentPage}
                   totalPages={totalPages}
                   onPageChange={handlePageChange}
-                  isDark={isDark}
                 />
               )}
             </>
@@ -668,15 +532,15 @@ const RecentOrdersPage = () => {
               width: 8px;
             }
             .custom-scrollbar::-webkit-scrollbar-track {
-              background: ${isDark ? "#374151" : "#f3f4f6"};
+              background: hsl(var(--muted));
               border-radius: 4px;
             }
             .custom-scrollbar::-webkit-scrollbar-thumb {
-              background: ${isDark ? "#4b5563" : "#d1d5db"};
+              background: hsl(var(--muted-foreground) / 0.3);
               border-radius: 4px;
             }
             .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-              background: ${isDark ? "#6b7280" : "#9ca3af"};
+              background: hsl(var(--muted-foreground) / 0.5);
             }
           `}</style>
         </div>
