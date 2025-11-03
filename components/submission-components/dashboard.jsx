@@ -448,7 +448,7 @@ const Dashboard = () => {
                  Our Frequent Readers
                 </h3>
                 <p className="text-sm text-muted-foreground">
-                  Customers with 5 or more orders
+                  Readers with frequent orders
                 </p>
               </div>
             </div>
