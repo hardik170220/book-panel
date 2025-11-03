@@ -29,6 +29,7 @@ const APDashboardLogin: React.FC = () => {
       if (session.user.role === "submission-admin") {
         router.replace("/admin/bookorder");
       } else {
+        console.log("Redirecting to /admin/dashboard");
         router.replace("/admin/dashboard");
       }
     }
