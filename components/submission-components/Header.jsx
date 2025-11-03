@@ -17,7 +17,6 @@ import { TbBorderAll } from "react-icons/tb";
 import { MdLibraryAdd, MdOutlineDashboard } from "react-icons/md";
 import * as XLSX from "xlsx";
 import * as pdfMake from "pdfmake/build/pdfmake";
-import { useTheme } from "../../app/utils/ThemeProvider";
 import { generateShippingLabelsPDF } from "../../app/utils/shpping-label-generator";
 import { signOut, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
@@ -42,7 +41,7 @@ const Header = ({
   const [searchQuery, setSearchQuery] = useState("");
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const { theme, toggleTheme } = useTheme();
+  const [theme, setTheme] = useState('light');
   const router = useRouter();
   
   // ✅ Use NextAuth session to get user info
@@ -56,8 +55,40 @@ const Header = ({
   const pathname = typeof window !== 'undefined' ? window.location.pathname : '';
   const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : new URLSearchParams();
   const currentBook = searchParams.get('book');
-  const isDashboardPage = pathname === '/' || pathname === '/bookorder';
+  const isDashboardPage = pathname === '/' || pathname === '/admin/bookorder';
   const isRecentOrdersPage = pathname === '/bookorder/recent-orders';
+
+  // Theme detection
+  useEffect(() => {
+    const checkTheme = () => {
+      if (document.documentElement.classList.contains('dark')) {
+        setTheme('dark');
+      } else {
+        setTheme('light');
+      }
+    };
+    
+    checkTheme();
+    
+    // Watch for theme changes
+    const observer = new MutationObserver(checkTheme);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class']
+    });
+    
+    return () => observer.disconnect();
+  }, []);
+
+  const toggleTheme = () => {
+    if (document.documentElement.classList.contains('dark')) {
+      document.documentElement.classList.remove('dark');
+      setTheme('light');
+    } else {
+      document.documentElement.classList.add('dark');
+      setTheme('dark');
+    }
+  };
 
   // Fetch books from API
   useEffect(() => {
@@ -428,17 +459,15 @@ const Header = ({
 
   return (
     <>
-      <header className="fixed top-0 left-0 right-0 z-50 font-poppins bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 shadow-sm">
+      <header className="sticky top-0 left-0 right-0 z-50 font-poppins bg-card border-b border-border shadow-sm">
         <div className="px-4 sm:px-6">
           {/* Main Header Row */}
-          <div className="flex items-center justify-between h-16 gap-4">
-            {/* Logo and Book Selector */}
-            <div className="flex items-center gap-3 flex-1 min-w-0">
-              {/* Logo */}
+          <div className="flex items-center justify-end h-16 gap-4">
+            {/* <div className="flex items-center gap-3 flex-1 min-w-0">
               <Link href='/bookorder' className="">
                 <img src="/logo.png" className="w-8" alt="Logo" />
               </Link>
-            </div>
+            </div> */}
 
             {/* Stats and Actions */}
             <div className="flex items-center gap-2 sm:gap-3">
@@ -446,7 +475,7 @@ const Header = ({
               <div className="relative flex-1 w-[15rem] max-w-xs" ref={bookMenuRef}>
                 <button
                   onClick={() => setIsBookMenuOpen(!isBookMenuOpen)}
-                  className="w-full flex items-center justify-between gap-2 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-800 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors border border-gray-300 dark:border-gray-600"
+                  className="w-full flex items-center justify-between gap-2 px-3 py-2 text-sm font-medium text-foreground bg-muted rounded-lg hover:bg-muted/80 transition-colors border border-border"
                 >
                   <div className="flex items-center gap-2 min-w-0 flex-1">
                     <FaBook className="flex-shrink-0 text-blue-600 dark:text-blue-400" size={14} />
@@ -457,17 +486,17 @@ const Header = ({
 
                 {/* Dropdown Menu */}
                 {isBookMenuOpen && (
-                  <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 overflow-hidden z-50">
+                  <div className="absolute top-full left-0 right-0 mt-2 bg-card rounded-lg shadow-xl border border-border overflow-hidden z-50">
                     {/* Search Box */}
-                    <div className="p-3 border-b border-gray-200 dark:border-gray-700">
+                    <div className="p-3 border-b border-border">
                       <div className="relative">
-                        <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={12} />
+                        <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={12} />
                         <input
                           type="text"
                           placeholder="Search books..."
                           value={searchQuery}
                           onChange={(e) => setSearchQuery(e.target.value)}
-                          className="w-full pl-9 pr-3 py-2 text-sm bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-gray-200"
+                          className="w-full pl-9 pr-3 py-2 text-sm bg-muted border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-foreground"
                         />
                       </div>
                     </div>
@@ -476,9 +505,9 @@ const Header = ({
                     <div className="max-h-72 overflow-y-auto custom-scrollbar">
                       {/* Dashboard */}
                       <a
-                        href="/bookorder"
-                        className={`flex items-center gap-3 px-4 py-3 text-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors ${
-                          isDashboardPage ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 font-medium' : 'text-gray-700 dark:text-gray-300'
+                        href="/admin/bookorder"
+                        className={`flex items-center gap-3 px-4 py-3 text-sm hover:bg-muted transition-colors ${
+                          isDashboardPage ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 font-medium' : 'text-foreground'
                         }`}
                       >
                         <MdOutlineDashboard size={18} />
@@ -487,9 +516,9 @@ const Header = ({
 
                       {/* All Recent Orders */}
                       <a
-                        href="/bookorder/recent-orders"
-                        className={`flex items-center gap-3 px-4 py-3 text-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors ${
-                          isRecentOrdersPage ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 font-medium' : 'text-gray-700 dark:text-gray-300'
+                        href="/admin/bookorder/recent-orders"
+                        className={`flex items-center gap-3 px-4 py-3 text-sm hover:bg-muted transition-colors ${
+                          isRecentOrdersPage ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 font-medium' : 'text-foreground'
                         }`}
                       >
                         <FaBook size={16} />
@@ -501,8 +530,8 @@ const Header = ({
                       {user && (user.role === "super admin") && (
                         <a
                           href="/admin/forms"
-                          className={`flex items-center gap-3 px-4 py-3 text-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors ${
-                            pathname === '/admin/forms' ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 font-medium' : 'text-gray-700 dark:text-gray-300'
+                          className={`flex items-center gap-3 px-4 py-3 text-sm hover:bg-muted transition-colors ${
+                            pathname === '/admin/forms' ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 font-medium' : 'text-foreground'
                           }`}
                         >
                           <MdLibraryAdd size={20} />
@@ -511,7 +540,7 @@ const Header = ({
                       )}
 
                       {/* Divider */}
-                      <div className="border-t border-gray-200 dark:border-gray-700 my-1"></div>
+                      <div className="border-t border-border my-1"></div>
 
                       {/* Book List */}
                       {loading ? (
@@ -522,9 +551,9 @@ const Header = ({
                         filteredBooks.map(book => (
                           <a
                             key={book.id}
-                            href={`/bookorder/view-submission?book=${book.id}`}
-                            className={`flex items-center gap-3 px-4 py-3 text-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors ${
-                              currentBook === book.id ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 font-medium' : 'text-gray-700 dark:text-gray-300'
+                            href={`/admin/bookorder/view-submission?book=${book.id}`}
+                            className={`flex items-center gap-3 px-4 py-3 text-sm hover:bg-muted transition-colors ${
+                              currentBook === book.id ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 font-medium' : 'text-foreground'
                             }`}
                           >
                             <div className="w-7 h-7 rounded-md bg-linear-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
@@ -534,7 +563,7 @@ const Header = ({
                           </a>
                         ))
                       ) : (
-                        <div className="px-4 py-8 text-center text-sm text-gray-500 dark:text-gray-400">
+                        <div className="px-4 py-8 text-center text-sm text-muted-foreground">
                           No books found
                         </div>
                       )}
@@ -556,24 +585,24 @@ const Header = ({
                   </button>
 
                   {isExportOpen && (
-                    <div className="absolute right-0 mt-2 w-44 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 overflow-hidden z-50">
+                    <div className="absolute right-0 mt-2 w-44 bg-card rounded-lg shadow-xl border border-border overflow-hidden z-50">
                       <button
                         onClick={exportToCSV}
-                        className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-left hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-colors"
+                        className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-left hover:bg-muted text-foreground transition-colors"
                       >
                         <FaFileExcel size={16} className="text-green-600" />
                         <span>Excel/CSV</span>
                       </button>
                       <button
                         onClick={exportToPDF}
-                        className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-left hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-colors"
+                        className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-left hover:bg-muted text-foreground transition-colors"
                       >
                         <FaFilePdf size={16} className="text-red-600" />
                         <span>PDF</span>
                       </button>
                       <button
                         onClick={generateShippingLabels}
-                        className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-left hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-colors"
+                        className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-left hover:bg-muted text-foreground transition-colors"
                       >
                         <TbBorderAll size={18} className="text-blue-600" />
                         <span>Shipping Labels</span>
@@ -587,7 +616,7 @@ const Header = ({
               {!isDashboardPage && !isRecentOrdersPage && (
                 <button
                   onClick={onFilterClick}
-                  className="relative flex items-center gap-1.5 px-3 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 text-sm font-medium rounded-lg transition-colors"
+                  className="relative flex items-center gap-1.5 px-3 py-2 bg-muted hover:bg-muted/80 text-foreground text-sm font-medium rounded-lg transition-colors"
                 >
                   <FaFilter size={12} />
                   <span className="hidden sm:inline">Filters</span>
@@ -600,20 +629,20 @@ const Header = ({
               )}
 
               {/* Theme Toggle */}
-              <button
+              {/* <button
                 onClick={toggleTheme}
-                className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                className="p-2 rounded-lg hover:bg-muted transition-colors"
                 aria-label="Toggle Theme"
               >
                 {theme === 'dark' ? (
                   <FaSun className="text-yellow-400" size={18} />
                 ) : (
-                  <FaMoon className="text-gray-600" size={18} />
+                  <FaMoon className="text-muted-foreground" size={18} />
                 )}
-              </button>
+              </button> */}
 
               {/* User & Logout */}
-              <div className="hidden md:flex items-center gap-2 pl-2 border-l border-gray-300 dark:border-gray-600">
+              {/* <div className="hidden md:flex items-center gap-2 pl-2 border-l border-border">
                 <button
                   onClick={handleLogoutClick}
                   className="p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400 transition-colors"
@@ -621,7 +650,7 @@ const Header = ({
                 >
                   <FaSignOutAlt size={16} />
                 </button>
-              </div>
+              </div> */}
 
               {/* Mobile Logout */}
               <button
@@ -639,20 +668,20 @@ const Header = ({
       {/* Logout Confirmation Modal */}
       {showLogoutConfirm && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[100] animate-fadeIn p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-scaleIn">
-            <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Confirm Logout</h3>
+          <div className="bg-card rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-scaleIn">
+            <div className="px-6 py-4 border-b border-border">
+              <h3 className="text-lg font-semibold text-foreground">Confirm Logout</h3>
             </div>
             <div className="px-6 py-4">
-              <p className="text-sm text-gray-600 dark:text-gray-300">
+              <p className="text-sm text-muted-foreground">
                 Are you sure you want to logout from your account?
               </p>
             </div>
-            <div className="px-6 py-4 bg-gray-50 dark:bg-gray-900/50 flex justify-end gap-3">
+            <div className="px-6 py-4 bg-muted/50 flex justify-end gap-3">
               <button
                 onClick={cancelLogout}
                 disabled={isLoggingOut}
-                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-4 py-2 text-sm font-medium text-foreground hover:bg-muted rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Cancel
               </button>
@@ -697,15 +726,15 @@ const Header = ({
           width: 8px;
         }
         .custom-scrollbar::-webkit-scrollbar-track {
-          background: #f3f4f6;
+          background: hsl(var(--muted));
           border-radius: 4px;
         }
         .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: #d1d5db;
+          background: hsl(var(--muted-foreground) / 0.3);
           border-radius: 4px;
         }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: #9ca3af;
+          background: hsl(var(--muted-foreground) / 0.5);
         }
       `}</style>
     </>

@@ -5,8 +5,6 @@ import {
   FaShoppingCart,
   FaChartLine,
   FaCalendarCheck,
-  FaSun,
-  FaMoon,
   FaTruck,
   FaClock,
   FaCheckCircle,
@@ -14,7 +12,6 @@ import {
   FaPercentage,
   FaArrowUp,
   FaArrowDown,
-  FaDotCircle,
   FaArrowRight,
   FaClipboardList,
   FaUserCircle,
@@ -43,8 +40,6 @@ import {
 // Firebase imports
 import { initializeApp } from "firebase/app";
 import { getFirestore, collection, getDocs } from "firebase/firestore";
-import { useTheme } from "../../app/utils/ThemeProvider";
-// import Sidebar from "./Sidebar";
 import Link from "next/link";
 import Header from "./Header";
 
@@ -96,7 +91,6 @@ const COLORS = [
 const Dashboard = () => {
   const [bookData, setBookData] = useState({});
   const [isLoading, setIsLoading] = useState(true);
-  const { theme, toggleTheme } = useTheme();
   const [error, setError] = useState(null);
   const [discoveredCollections, setDiscoveredCollections] = useState([]);
   const [recentOrdersCount, setRecentOrdersCount] = useState(0);
@@ -141,11 +135,10 @@ const Dashboard = () => {
 
           if (snapshot.size > 0) {
             const total = snapshot.size;
-           const shipped = snapshot.docs.filter((doc) => {
-  const data = doc.data();
-  // Consider shipped if either deliveredDate is set OR parcelId exists
-  return data.deliveredDate || (data.parcelId && data.parcelId.trim() !== "");
-}).length;
+            const shipped = snapshot.docs.filter((doc) => {
+              const data = doc.data();
+              return data.deliveredDate || (data.parcelId && data.parcelId.trim() !== "");
+            }).length;
 
             // Count recent orders (last 7 days)
             const sevenDaysAgo = new Date();
@@ -213,11 +206,10 @@ const Dashboard = () => {
         );
       }
 
-      // Get top 10 customers with 5+ orders
+      // Get top customers with 5+ orders
       const customersArray = Array.from(customerOrderMap.values())
-        .filter((customer) => customer.count >= foundCollections.length -2)
-        .sort((a, b) => b.count - a.count)
-        // .slice(0, 10);
+        .filter((customer) => customer.count >= foundCollections.length - 2)
+        .sort((a, b) => b.count - a.count);
 
       setBookData(loadedData);
       setDiscoveredCollections(foundCollections);
@@ -300,11 +292,9 @@ const Dashboard = () => {
     .sort((a, b) => a.rate - b.rate)
     .slice(0, 3);
 
-  const isDark = theme === "dark";
-
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="bg-red-100 dark:bg-red-900 p-8 rounded-xl shadow-lg max-w-md">
           <h2 className="text-xl font-bold text-red-800 dark:text-red-200 mb-2">
             Error Loading Data
@@ -323,29 +313,17 @@ const Dashboard = () => {
 
   if (isLoading) {
     return (
-      <div
-        className={`min-h-screen flex flex-col items-center justify-center ${
-          isDark ? "bg-gray-900" : "bg-gray-50"
-        }`}
-      >
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background">
         <div className="relative">
           <div className="animate-spin rounded-full h-20 w-20 border-t-4 border-b-4 border-green-500"></div>
           <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
             <FaBook className="text-green-500 text-2xl animate-pulse" />
           </div>
         </div>
-        <p
-          className={`mt-4 text-lg ${
-            isDark ? "text-gray-300" : "text-gray-600"
-          }`}
-        >
+        <p className="mt-4 text-lg text-muted-foreground">
           Discovering collections...
         </p>
-        <p
-          className={`mt-2 text-sm ${
-            isDark ? "text-gray-400" : "text-gray-500"
-          }`}
-        >
+        <p className="mt-2 text-sm text-muted-foreground">
           Scanning for bookorder databases
         </p>
       </div>
@@ -353,23 +331,13 @@ const Dashboard = () => {
   }
 
   return (
-    <div
-      className={`min-h-screen ${
-        isDark ? "bg-gray-900" : "bg-gray-50"
-      } transition-colors duration-200`}
-    >
+    <div className="min-h-screen bg-background transition-colors duration-200">
       <Header />
 
-      <div className="p-4 md:p-6 space-y-6 mt-16">
+      <div className="p-4 md:p-6 space-y-6 ">
         {/* Key Metrics */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-          <div
-            className={`${
-              isDark
-                ? "bg-linear-to-br from-blue-900 to-blue-800"
-                : "bg-linear-to-br from-blue-500 to-blue-600"
-            } rounded-xl p-5 shadow-lg transform hover:scale-105 transition-transform duration-200`}
-          >
+          <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-5 shadow-lg transform hover:scale-105 transition-transform duration-200">
             <div className="flex items-center justify-between mb-3">
               <div className="bg-white/20 backdrop-blur-sm rounded-lg p-2.5">
                 <FaShoppingCart className="text-white text-xl" />
@@ -389,13 +357,7 @@ const Dashboard = () => {
             </div>
           </div>
 
-          <div
-            className={`${
-              isDark
-                ? "bg-linear-to-br from-green-900 to-green-800"
-                : "bg-linear-to-br from-green-500 to-green-600"
-            } rounded-xl p-5 shadow-lg transform hover:scale-105 transition-transform duration-200`}
-          >
+          <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-xl p-5 shadow-lg transform hover:scale-105 transition-transform duration-200">
             <div className="flex items-center justify-between mb-3">
               <div className="bg-white/20 backdrop-blur-sm rounded-lg p-2.5">
                 <FaTruck className="text-white text-xl" />
@@ -413,13 +375,7 @@ const Dashboard = () => {
             </div>
           </div>
 
-          <div
-            className={`${
-              isDark
-                ? "bg-linear-to-br from-yellow-900 to-yellow-800"
-                : "bg-linear-to-br from-yellow-500 to-yellow-600"
-            } rounded-xl p-5 shadow-lg transform hover:scale-105 transition-transform duration-200`}
-          >
+          <div className="bg-gradient-to-br from-yellow-500 to-yellow-600 rounded-xl p-5 shadow-lg transform hover:scale-105 transition-transform duration-200">
             <div className="flex items-center justify-between mb-3">
               <div className="bg-white/20 backdrop-blur-sm rounded-lg p-2.5">
                 <FaClock className="text-white text-xl" />
@@ -439,13 +395,7 @@ const Dashboard = () => {
             </div>
           </div>
 
-          <div
-            className={`${
-              isDark
-                ? "bg-linear-to-br from-purple-900 to-purple-800"
-                : "bg-linear-to-br from-purple-500 to-purple-600"
-            } rounded-xl p-5 shadow-lg transform hover:scale-105 transition-transform duration-200`}
-          >
+          <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl p-5 shadow-lg transform hover:scale-105 transition-transform duration-200">
             <div className="flex items-center justify-between mb-3">
               <div className="bg-white/20 backdrop-blur-sm rounded-lg p-2.5">
                 <FaPercentage className="text-white text-xl" />
@@ -465,13 +415,7 @@ const Dashboard = () => {
             </div>
           </div>
 
-          <div
-            className={`${
-              isDark
-                ? "bg-linear-to-br from-pink-900 to-pink-800"
-                : "bg-linear-to-br from-pink-500 to-pink-600"
-            } rounded-xl p-5 shadow-lg transform hover:scale-105 transition-transform duration-200`}
-          >
+          <div className="bg-gradient-to-br from-pink-500 to-pink-600 rounded-xl p-5 shadow-lg transform hover:scale-105 transition-transform duration-200">
             <div className="flex items-center justify-between mb-3">
               <div className="bg-white/20 backdrop-blur-sm rounded-lg p-2.5">
                 <FaBoxes className="text-white text-xl" />
@@ -494,34 +438,16 @@ const Dashboard = () => {
 
         {/* Top 10 Customers Section */}
         {topCustomers.length > 0 && (
-          <div
-            className={`${
-              isDark ? "bg-gray-800" : "bg-white"
-            } rounded-xl shadow-lg p-6`}
-          >
+          <div className="bg-card rounded-xl shadow-lg py-6">
             <div className="flex items-center gap-3 mb-6">
-              <div
-                className={`${
-                  isDark
-                    ? "bg-linear-to-br from-orange-600 to-orange-700"
-                    : "bg-linear-to-br from-orange-500 to-orange-600"
-                } p-3 rounded-xl shadow-lg`}
-              >
+              <div className="bg-gradient-to-br from-orange-500 to-orange-600 p-3 rounded-xl shadow-lg">
                 <FaCrown className="text-white text-2xl" />
               </div>
               <div>
-                <h3
-                  className={`text-xl font-bold ${
-                    isDark ? "text-white" : "text-gray-900"
-                  }`}
-                >
+                <h3 className="text-xl font-bold text-foreground">
                   Top 10 Customers
                 </h3>
-                <p
-                  className={`text-sm ${
-                    isDark ? "text-gray-400" : "text-gray-500"
-                  }`}
-                >
+                <p className="text-sm text-muted-foreground">
                   Customers with 5 or more orders
                 </p>
               </div>
@@ -531,22 +457,18 @@ const Dashboard = () => {
               {topCustomers.map((customer, index) => (
                 <div
                   key={index}
-                  className={`${
-                    isDark ? "bg-gray-700" : "bg-gray-50"
-                  } rounded-lg p-4 flex items-center justify-between hover:shadow-md transition-shadow`}
+                  className="bg-muted rounded-lg p-4 flex items-center justify-between hover:shadow-md transition-shadow"
                 >
                   <div className="flex items-center gap-3">
                     <div
                       className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-white text-lg ${
                         index === 0
-                          ? "bg-linear-to-br from-yellow-400 to-yellow-600"
+                          ? "bg-gradient-to-br from-yellow-400 to-yellow-600"
                           : index === 1
-                          ? "bg-linear-to-br from-gray-300 to-gray-500"
+                          ? "bg-gradient-to-br from-gray-300 to-gray-500"
                           : index === 2
-                          ? "bg-linear-to-br from-orange-400 to-orange-600"
-                          : isDark
-                          ? "bg-gray-600"
-                          : "bg-gray-300"
+                          ? "bg-gradient-to-br from-orange-400 to-orange-600"
+                          : "bg-muted-foreground/50"
                       }`}
                     >
                       {index === 0 ? (
@@ -560,18 +482,10 @@ const Dashboard = () => {
                       )}
                     </div>
                     <div>
-                      <p
-                        className={`font-semibold ${
-                          isDark ? "text-white" : "text-gray-900"
-                        }`}
-                      >
+                      <p className="font-semibold text-foreground">
                         {customer.name}
                       </p>
-                      <p
-                        className={`text-sm ${
-                          isDark ? "text-gray-400" : "text-gray-500"
-                        }`}
-                      >
+                      <p className="text-sm text-muted-foreground">
                         {customer.phone || "No phone"}
                       </p>
                     </div>
@@ -585,18 +499,12 @@ const Dashboard = () => {
                           ? "text-gray-400"
                           : index === 2
                           ? "text-orange-500"
-                          : isDark
-                          ? "text-orange-400"
                           : "text-orange-600"
                       }`}
                     >
                       {customer.count}
                     </p>
-                    <p
-                      className={`text-xs ${
-                        isDark ? "text-gray-400" : "text-gray-500"
-                      }`}
-                    >
+                    <p className="text-xs text-muted-foreground">
                       orders
                     </p>
                   </div>
@@ -605,11 +513,7 @@ const Dashboard = () => {
             </div>
 
             {topCustomers.length === 0 && (
-              <div
-                className={`text-center py-8 ${
-                  isDark ? "text-gray-400" : "text-gray-500"
-                }`}
-              >
+              <div className="text-center py-8 text-muted-foreground">
                 <FaUserCircle className="mx-auto text-4xl mb-3 opacity-50" />
                 <p>No customers with 5+ orders yet</p>
               </div>
@@ -619,77 +523,37 @@ const Dashboard = () => {
 
         {/* Recent Orders Summary Card - Clickable */}
         <Link href="/pages/recent-orders">
-          <div
-            className={`${
-              isDark
-                ? "bg-gray-800 hover:bg-gray-750"
-                : "bg-white hover:bg-gray-50"
-            } rounded-xl shadow-lg mt-6 p-6 cursor-pointer transition-all duration-200 border-2 ${
-              isDark
-                ? "border-gray-700 hover:border-green-600"
-                : "border-gray-200 hover:border-green-500"
-            }`}
-          >
+          <div className="bg-card hover:bg-muted/50 rounded-xl shadow-lg mt-6 p-6 cursor-pointer transition-all duration-200 border-2 border-border hover:border-green-500">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
-                <div
-                  className={`${
-                    isDark
-                      ? "bg-linear-to-br from-cyan-900 to-cyan-800"
-                      : "bg-linear-to-br from-cyan-500 to-cyan-600"
-                  } p-4 rounded-xl shadow-lg`}
-                >
+                <div className="bg-gradient-to-br from-cyan-500 to-cyan-600 p-4 rounded-xl shadow-lg">
                   <FaClipboardList className="text-white text-3xl" />
                 </div>
                 <div>
-                  <h3
-                    className={`text-2xl font-bold ${
-                      isDark ? "text-white" : "text-gray-900"
-                    }`}
-                  >
+                  <h3 className="text-2xl font-bold text-foreground">
                     View All Book Orders
                   </h3>
-                  <p
-                    className={`text-sm mt-1 ${
-                      isDark ? "text-gray-400" : "text-gray-500"
-                    }`}
-                  >
+                  <p className="text-sm mt-1 text-muted-foreground">
                     View all order activity and details
                   </p>
                 </div>
               </div>
               <div className="flex items-center gap-4">
                 <div className="text-right">
-                  <p
-                    className={`text-4xl font-bold ${
-                      isDark ? "text-cyan-400" : "text-cyan-600"
-                    }`}
-                  >
+                  <p className="text-4xl font-bold text-cyan-600">
                     {recentOrdersCount}
                     <p className="text-sm text-cyan-700">orders in 7 days</p>
                   </p>
                 </div>
-                <FaArrowRight
-                  className={`text-3xl ${
-                    isDark ? "text-gray-600" : "text-gray-400"
-                  } group-hover:text-green-500 transition-colors`}
-                />
+                <FaArrowRight className="text-3xl text-muted-foreground group-hover:text-green-500 transition-colors" />
               </div>
             </div>
-            <div
-              className={`mt-4 pt-4 border-t ${
-                isDark ? "border-gray-700" : "border-gray-200"
-              }`}
-            >
+            <div className="mt-4 pt-4 border-t border-border">
               <div className="flex items-center justify-between text-sm">
-                <span className={isDark ? "text-gray-400" : "text-gray-600"}>
+                <span className="text-muted-foreground">
                   Click to view detailed order information
                 </span>
-                <span
-                  className={`font-semibold ${
-                    isDark ? "text-cyan-400" : "text-cyan-600"
-                  }`}
-                >
+                <span className="font-semibold text-cyan-600">
                   View Details →
                 </span>
               </div>
@@ -699,18 +563,10 @@ const Dashboard = () => {
 
         {/* Top and Bottom Performers */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div
-            className={`${
-              isDark ? "bg-gray-800" : "bg-white"
-            } rounded-xl shadow-lg p-6`}
-          >
+          <div className="bg-card rounded-xl shadow-lg py-6">
             <div className="flex items-center gap-2 mb-4">
               <FaArrowUp className="text-green-500 text-xl" />
-              <h3
-                className={`text-lg font-bold ${
-                  isDark ? "text-white" : "text-gray-900"
-                }`}
-              >
+              <h3 className="text-lg font-bold text-foreground">
                 Top Performers
               </h3>
             </div>
@@ -718,30 +574,20 @@ const Dashboard = () => {
               {topPerformers.map((book, index) => (
                 <div
                   key={index}
-                  className={`${
-                    isDark ? "bg-gray-700" : "bg-gray-50"
-                  } rounded-lg p-4 flex items-center justify-between`}
+                  className="bg-muted rounded-lg p-4 flex items-center justify-between"
                 >
                   <div className="flex items-center gap-3">
                     <div
-                      className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-white`}
+                      className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-white"
                       style={{ backgroundColor: COLORS[index] }}
                     >
                       {index + 1}
                     </div>
                     <div>
-                      <p
-                        className={`font-semibold ${
-                          isDark ? "text-white" : "text-gray-900"
-                        }`}
-                      >
+                      <p className="font-semibold text-foreground">
                         {book.name}
                       </p>
-                      <p
-                        className={`text-sm ${
-                          isDark ? "text-gray-400" : "text-gray-500"
-                        }`}
-                      >
+                      <p className="text-sm text-muted-foreground">
                         {book.total} total orders
                       </p>
                     </div>
@@ -750,11 +596,7 @@ const Dashboard = () => {
                     <p className="text-2xl font-bold text-green-500">
                       {book.rate}%
                     </p>
-                    <p
-                      className={`text-xs ${
-                        isDark ? "text-gray-400" : "text-gray-500"
-                      }`}
-                    >
+                    <p className="text-xs text-muted-foreground">
                       fulfilled
                     </p>
                   </div>
@@ -763,18 +605,10 @@ const Dashboard = () => {
             </div>
           </div>
 
-          <div
-            className={`${
-              isDark ? "bg-gray-800" : "bg-white"
-            } rounded-xl shadow-lg p-6`}
-          >
+          <div className="bg-card rounded-xl shadow-lg py-6">
             <div className="flex items-center gap-2 mb-4">
               <FaArrowDown className="text-orange-500 text-xl" />
-              <h3
-                className={`text-lg font-bold ${
-                  isDark ? "text-white" : "text-gray-900"
-                }`}
-              >
+              <h3 className="text-lg font-bold text-foreground">
                 Needs Attention
               </h3>
             </div>
@@ -782,29 +616,17 @@ const Dashboard = () => {
               {bottomPerformers.map((book, index) => (
                 <div
                   key={index}
-                  className={`${
-                    isDark ? "bg-gray-700" : "bg-gray-50"
-                  } rounded-lg p-4 flex items-center justify-between`}
+                  className="bg-muted rounded-lg p-4 flex items-center justify-between"
                 >
                   <div className="flex items-center gap-3">
-                    <div
-                      className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-white bg-orange-500`}
-                    >
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-white bg-orange-500">
                       !
                     </div>
                     <div>
-                      <p
-                        className={`font-semibold ${
-                          isDark ? "text-white" : "text-gray-900"
-                        }`}
-                      >
+                      <p className="font-semibold text-foreground">
                         {book.name}
                       </p>
-                      <p
-                        className={`text-sm ${
-                          isDark ? "text-gray-400" : "text-gray-500"
-                        }`}
-                      >
+                      <p className="text-sm text-muted-foreground">
                         {book.pending} pending orders
                       </p>
                     </div>
@@ -813,11 +635,7 @@ const Dashboard = () => {
                     <p className="text-2xl font-bold text-orange-500">
                       {book.rate}%
                     </p>
-                    <p
-                      className={`text-xs ${
-                        isDark ? "text-gray-400" : "text-gray-500"
-                      }`}
-                    >
+                    <p className="text-xs text-muted-foreground">
                       fulfilled
                     </p>
                   </div>
@@ -830,16 +648,8 @@ const Dashboard = () => {
         {/* Charts Row */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Distribution Pie Chart */}
-          <div
-            className={`${
-              isDark ? "bg-gray-800" : "bg-white"
-            } rounded-xl shadow-lg p-6`}
-          >
-            <h3
-              className={`text-lg font-bold mb-4 ${
-                isDark ? "text-white" : "text-gray-900"
-              }`}
-            >
+          <div className="bg-card rounded-xl shadow-lg py-6">
+            <h3 className="text-lg font-bold mb-4 text-foreground">
               Order Distribution
             </h3>
             <ResponsiveContainer width="100%" height={300}>
@@ -865,8 +675,8 @@ const Dashboard = () => {
                 </Pie>
                 <Tooltip
                   contentStyle={{
-                    backgroundColor: isDark ? "#1f2937" : "#ffffff",
-                    border: `1px solid ${isDark ? "#374151" : "#e5e7eb"}`,
+                    backgroundColor: "hsl(var(--card))",
+                    border: "1px solid hsl(var(--border))",
                     borderRadius: "8px",
                   }}
                 />
@@ -875,16 +685,8 @@ const Dashboard = () => {
           </div>
 
           {/* Status Distribution */}
-          <div
-            className={`${
-              isDark ? "bg-gray-800" : "bg-white"
-            } rounded-xl shadow-lg p-6`}
-          >
-            <h3
-              className={`text-lg font-bold mb-4 ${
-                isDark ? "text-white" : "text-gray-900"
-              }`}
-            >
+          <div className="bg-card rounded-xl shadow-lg py-6">
+            <h3 className="text-lg font-bold mb-4 text-foreground">
               Overall Status
             </h3>
             <ResponsiveContainer width="100%" height={300}>
@@ -907,8 +709,8 @@ const Dashboard = () => {
                 </Pie>
                 <Tooltip
                   contentStyle={{
-                    backgroundColor: isDark ? "#1f2937" : "#ffffff",
-                    border: `1px solid ${isDark ? "#374151" : "#e5e7eb"}`,
+                    backgroundColor: "hsl(var(--card))",
+                    border: "1px solid hsl(var(--border))",
                     borderRadius: "8px",
                   }}
                 />
@@ -918,29 +720,21 @@ const Dashboard = () => {
         </div>
 
         {/* Performance Radar Chart */}
-        <div
-          className={`${
-            isDark ? "bg-gray-800" : "bg-white"
-          } rounded-xl shadow-lg p-6`}
-        >
-          <h3
-            className={`text-lg font-bold mb-4 ${
-              isDark ? "text-white" : "text-gray-900"
-            }`}
-          >
+        <div className="bg-card rounded-xl shadow-lg py-6">
+          <h3 className="text-lg font-bold mb-4 text-foreground">
             Performance Comparison Radar
           </h3>
           <ResponsiveContainer width="100%" height={400}>
             <RadarChart data={radarData}>
-              <PolarGrid stroke={isDark ? "#374151" : "#e5e7eb"} />
+              <PolarGrid stroke="hsl(var(--border))" />
               <PolarAngleAxis
                 dataKey="book"
-                tick={{ fill: isDark ? "#9ca3af" : "#6b7280", fontSize: 12 }}
+                tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
               />
               <PolarRadiusAxis
                 angle={90}
                 domain={[0, 100]}
-                tick={{ fill: isDark ? "#9ca3af" : "#6b7280" }}
+                tick={{ fill: "hsl(var(--muted-foreground))" }}
               />
               <Radar
                 name="Fulfillment Rate"
@@ -959,8 +753,8 @@ const Dashboard = () => {
               <Legend />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: isDark ? "#1f2937" : "#ffffff",
-                  border: `1px solid ${isDark ? "#374151" : "#e5e7eb"}`,
+                  backgroundColor: "hsl(var(--card))",
+                  border: "1px solid hsl(var(--border))",
                   borderRadius: "8px",
                 }}
               />
@@ -968,16 +762,14 @@ const Dashboard = () => {
           </ResponsiveContainer>
         </div>
 
+       
+
         {/* Book Performance Comparison Bar Chart */}
         <div
-          className={`${
-            isDark ? "bg-gray-800" : "bg-white"
-          } rounded-xl shadow-lg p-6`}
+          className={`bg-card  rounded-xl shadow-lg py-6`}
         >
           <h3
-            className={`text-lg font-bold mb-4 ${
-              isDark ? "text-white" : "text-gray-900"
-            }`}
+            className={`text-lg font-bold mb-4 text-foreground`}
           >
             Total vs Shipped by Book
           </h3>
@@ -985,20 +777,20 @@ const Dashboard = () => {
             <BarChart data={bookComparisonData}>
               <CartesianGrid
                 strokeDasharray="3 3"
-                stroke={isDark ? "#374151" : "#e5e7eb"}
+                 stroke="hsl(var(--border))"
               />
               <XAxis
                 dataKey="name"
-                stroke={isDark ? "#9ca3af" : "#6b7280"}
+                stroke="hsl(var(--muted-foreground))"
                 angle={-45}
                 textAnchor="end"
                 height={100}
               />
-              <YAxis stroke={isDark ? "#9ca3af" : "#6b7280"} />
+              <YAxis stroke="hsl(var(--muted-foreground))" />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: isDark ? "#1f2937" : "#ffffff",
-                  border: `1px solid ${isDark ? "#374151" : "#e5e7eb"}`,
+                 backgroundColor: "hsl(var(--card))",
+                  border: `hsl(var(--border))`,
                   borderRadius: "8px",
                 }}
               />
@@ -1020,35 +812,19 @@ const Dashboard = () => {
         </div>
 
         {/* Detailed Book Cards - Scrollable Grid */}
-        <div
-          className={`${
-            isDark ? "bg-gray-800" : "bg-white"
-          } rounded-xl shadow-lg p-6`}
-        >
-          <h3
-            className={`text-lg font-bold mb-6 ${
-              isDark ? "text-white" : "text-gray-900"
-            }`}
-          >
+       <div className="bg-card rounded-xl shadow-lg py-6">
+          <h3 className="text-lg font-bold mb-6 text-foreground">
             All Books Overview ({Object.keys(bookData).length})
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
             {bookComparisonData.map((book, index) => (
               <div
                 key={index}
-                className={`${
-                  isDark
-                    ? "bg-gray-700 hover:bg-gray-650"
-                    : "bg-gray-50 hover:bg-gray-100"
-                } rounded-lg p-4 transition-all duration-200 border-l-4 hover:shadow-md cursor-pointer group`}
+                className="bg-muted hover:bg-muted/80 rounded-lg p-4 transition-all duration-200 border-l-4 hover:shadow-md cursor-pointer group"
                 style={{ borderLeftColor: COLORS[index % COLORS.length] }}
               >
                 <div className="flex items-start justify-between mb-3">
-                  <h4
-                    className={`font-semibold text-sm ${
-                      isDark ? "text-white" : "text-gray-900"
-                    } group-hover:scale-105 transition-transform`}
-                  >
+                  <h4 className="font-semibold text-sm text-foreground group-hover:scale-105 transition-transform">
                     {book.name}
                   </h4>
                   <div
@@ -1058,45 +834,25 @@ const Dashboard = () => {
                 </div>
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between items-center">
-                    <span
-                      className={isDark ? "text-gray-400" : "text-gray-600"}
-                    >
-                      Total:
-                    </span>
-                    <span
-                      className={`font-bold ${
-                        isDark ? "text-white" : "text-gray-900"
-                      }`}
-                    >
+                    <span className="text-muted-foreground">Total:</span>
+                    <span className="font-bold text-foreground">
                       {book.total}
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span
-                      className={isDark ? "text-gray-400" : "text-gray-600"}
-                    >
-                      Shipped:
-                    </span>
+                    <span className="text-muted-foreground">Shipped:</span>
                     <span className="font-bold text-green-500">
                       {book.shipped}
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span
-                      className={isDark ? "text-gray-400" : "text-gray-600"}
-                    >
-                      Pending:
-                    </span>
+                    <span className="text-muted-foreground">Pending:</span>
                     <span className="font-bold text-yellow-500">
                       {book.pending}
                     </span>
                   </div>
                   <div className="mt-3">
-                    <div
-                      className={`w-full ${
-                        isDark ? "bg-gray-600" : "bg-gray-200"
-                      } rounded-full h-2`}
-                    >
+                    <div className="w-full bg-muted-foreground/20 rounded-full h-2">
                       <div
                         className="h-2 rounded-full transition-all duration-500"
                         style={{
@@ -1105,11 +861,7 @@ const Dashboard = () => {
                         }}
                       ></div>
                     </div>
-                    <p
-                      className={`text-xs mt-1 text-right ${
-                        isDark ? "text-gray-400" : "text-gray-500"
-                      }`}
-                    >
+                    <p className="text-xs mt-1 text-right text-muted-foreground">
                       {book.rate}% Complete
                     </p>
                   </div>
@@ -1123,15 +875,15 @@ const Dashboard = () => {
               width: 8px;
             }
             .custom-scrollbar::-webkit-scrollbar-track {
-              background: ${isDark ? "#374151" : "#f3f4f6"};
+              background: hsl(var(--muted));
               border-radius: 4px;
             }
             .custom-scrollbar::-webkit-scrollbar-thumb {
-              background: ${isDark ? "#4b5563" : "#d1d5db"};
+              background: hsl(var(--muted-foreground) / 0.3);
               border-radius: 4px;
             }
             .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-              background: ${isDark ? "#6b7280" : "#9ca3af"};
+              background: hsl(var(--muted-foreground) / 0.5);
             }
           `}</style>
         </div>

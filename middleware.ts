@@ -48,11 +48,15 @@ export default withAuth(
     const { pathname } = req.nextUrl
     const role = req.nextauth.token?.role
 
-    // 🚀 redirect submission-admins to /bookorder if they try to access /admin
-    if (pathname.startsWith("/admin") && role === "submission-admin") {
-      const url = new URL("/bookorder", req.url)
-      return NextResponse.redirect(url)
-    }
+    if (
+  pathname.startsWith("/admin") &&
+  !pathname.startsWith("/admin/bookorder") &&
+  role === "submission-admin"
+) {
+  const url = new URL("/admin/bookorder", req.url)
+  return NextResponse.redirect(url)
+}
+
 
     // Access control
     if (pathname.startsWith("/admin/forms") || pathname.startsWith("/admin/dashboard")) {
@@ -61,7 +65,7 @@ export default withAuth(
       }
     }
 
-    if (pathname.startsWith("/bookorder")) {
+    if (pathname.startsWith("/admin/bookorder")) {
       if (role !== "submission-admin" && role !== "super admin") {
         return NextResponse.redirect(new URL("/access-denied", req.url))
       }

@@ -27,7 +27,7 @@ const APDashboardLogin: React.FC = () => {
   useEffect(() => {
     if (status === "authenticated" && session?.user?.role) {
       if (session.user.role === "submission-admin") {
-        router.replace("/bookorder");
+        router.replace("/admin/bookorder");
       } else {
         router.replace("/admin/dashboard");
       }
@@ -75,7 +75,7 @@ const APDashboardLogin: React.FC = () => {
           const res = await fetch("/api/auth/session");
           const newSession = await res.json();
           if (newSession?.user?.role === "submission-admin") {
-            router.push("/bookorder");
+            router.push("/admin/bookorder");
           } else {
             router.push("/admin/dashboard");
           }
@@ -90,20 +90,34 @@ const APDashboardLogin: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-linear-to-br from-gray-900 via-black to-gray-800 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        <div className="bg-white rounded-2xl shadow-2xl overflow-hidden">
+    <div className="min-h-screen relative font-poppins flex items-center justify-center p-4">
+      {/* Background Image */}
+      <div 
+        className="absolute inset-0 z-0"
+        style={{
+          backgroundImage: "url('Mahabharat.jpg')",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          backgroundRepeat: "no-repeat"
+        }}
+      />
+      
+      {/* Dark Overlay */}
+      <div className="absolute inset-0 bg-black opacity-60 z-10"></div>
+
+      {/* Login Card */}
+      <div className="relative z-20 w-full max-w-md">
+        <div className="bg-white rounded-sm shadow-lg overflow-hidden backdrop-blur-sm">
           {/* Header Section */}
-          <div className="bg-black text-white p-8 text-center relative overflow-hidden">
-            <div className="absolute inset-0 bg-linear-to-r from-gray-800 to-black opacity-90"></div>
+          <div className="bg-gradient-to-br from-gray-900 via-gray-800 to-black text-white p-8 text-center relative overflow-hidden">
             <div className="relative z-10">
-              <div className="w-14 h-14 bg-white rounded-full flex items-center justify-center mx-auto mb-4">
+              <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
                 <img src="/logo.png" className="h-12" alt="AP" />
               </div>
-              <h1 className="text-2xl font-bold mb-2">AP Forms</h1>
-              <p className="text-gray-300 text-sm">
+              <h1 className="text-2xl font-bold mb-2">Ap Book Panel</h1>
+              {/* <p className="text-gray-300 text-sm">
                 Access your administrative panel
-              </p>
+              </p> */}
             </div>
           </div>
 
@@ -111,7 +125,7 @@ const APDashboardLogin: React.FC = () => {
           <div className="p-8">
             <form onSubmit={handleSubmit} className="space-y-6">
               {error && (
-                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-sm text-sm">
                   {error}
                 </div>
               )}
@@ -125,7 +139,7 @@ const APDashboardLogin: React.FC = () => {
                   Email Address
                 </label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                     <Mail className="h-5 w-5 text-gray-400" />
                   </div>
                   <input
@@ -134,8 +148,8 @@ const APDashboardLogin: React.FC = () => {
                     name="email"
                     value={formData.email}
                     onChange={handleInputChange}
-                    className="w-full pl-10 pr-4 py-3 border text-black border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all duration-200 bg-gray-50 focus:bg-white"
-                    placeholder="Enter your email"
+                    className="w-full pl-12 pr-4 placeholder:text-sm py-2 border text-gray-900 border-gray-300 rounded-sm focus:ring-2 focus:ring-gray-800 focus:border-transparent outline-none transition-all duration-200 bg-gray-50 focus:bg-white placeholder-gray-400"
+                    placeholder="First Name..."
                     required
                     disabled={isLoading}
                   />
@@ -151,7 +165,7 @@ const APDashboardLogin: React.FC = () => {
                   Password
                 </label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                     <Lock className="h-5 w-5 text-gray-400" />
                   </div>
                   <input
@@ -160,14 +174,14 @@ const APDashboardLogin: React.FC = () => {
                     name="password"
                     value={formData.password}
                     onChange={handleInputChange}
-                    className="w-full pl-10 text-black pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all duration-200 bg-gray-50 focus:bg-white"
-                    placeholder="Enter your password"
+                    className="w-full pl-12 text-gray-900 pr-12 py-2 border border-gray-300 placeholder:text-sm rounded-sm focus:ring-2 focus:ring-gray-800 focus:border-transparent outline-none transition-all duration-200 bg-gray-50 focus:bg-white placeholder-gray-400"
+                    placeholder="Password"
                     required
                     disabled={isLoading}
                   />
                   <button
                     type="button"
-                    className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                    className="absolute inset-y-0 right-0 pr-4 flex items-center"
                     onClick={() => setShowPassword(!showPassword)}
                     disabled={isLoading}
                   >
@@ -180,19 +194,21 @@ const APDashboardLogin: React.FC = () => {
                 </div>
               </div>
 
-              {/* Submit */}
+             
+
+              {/* Submit Button */}
               <button
                 type="submit"
                 disabled={isLoading || !formData.email || !formData.password}
-                className="w-full bg-black text-white py-3 px-4 rounded-lg font-semibold transition-all duration-200 hover:bg-gray-800 focus:ring-4 focus:ring-gray-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+                className="w-full bg-gray-900 font-poppins text-gray-100 py-3.5 px-4 rounded-sm border border-gray-300 font-bold text-base transition-all duration-200 hover:from-gray-500 hover:to-gray-600 focus:ring-4 focus:ring-gray-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 shadow-md hover:shadow-md transform hover:-translate-y-0.5"
               >
                 {isLoading ? (
                   <>
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    <span>Signing in...</span>
+                    <div className="w-5 h-5 border-1 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <span>SIGNING IN...</span>
                   </>
                 ) : (
-                  <span>Sign In to Dashboard</span>
+                  <span>Login</span>
                 )}
               </button>
             </form>

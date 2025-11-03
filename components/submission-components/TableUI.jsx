@@ -200,7 +200,7 @@ const TableUI = ({
   const isMahabharatBook = bookName === "Mahabharat Book" ? true : false;
 
   return (
-    <div className={" py-4" + (isMahabharatBook ? ' mt-16' : '')}>
+    <div className={" py-4"  + (isMahabharatBook ? ' mt-16' : '')}>
       <div className="flex w-full  flex-col md:flex-row justify-between items-center mb-4">
         <div className="flex bg-gray-800 text-white dark:bg-gray-200 dark:text-gray-800 py-2 px-8 w-full items-center justify-between">
            <h1 className="text-lg capitalize font-poppins font-bold">
@@ -270,8 +270,8 @@ const TableUI = ({
         </div>
       )}
 
-      <div className="overflow-x-auto w-full">
-        <Table className="table-auto text-sm border-collapse border-b w-full">
+      <div className="overflow-x-auto max-w-[62rem] lg:max-w-6xl w-full">
+        <Table className="table-auto  text-sm border-collapse border-b w-full">
           <Thead className="text-sm">
             <Tr>
               <Th className="border-b py-3 text-left px-2 w-10">
@@ -323,7 +323,7 @@ const TableUI = ({
                   {allColumns.map((column, colIndex) => (
                     <Td 
                       key={colIndex} 
-                      className="border-b px-2 py-2"
+                      className="border-b px-2 capitalize py-2"
                       onClick={() => onRowClick && onRowClick(item, actualRowIndex)}
                       style={onRowClick ? { cursor: 'pointer',fontSize:"0.85rem" } : {fontSize:"0.82rem"}}
                     >

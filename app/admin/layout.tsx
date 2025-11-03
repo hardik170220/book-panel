@@ -22,7 +22,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
             <h1 className="text-base font-semibold">Admin</h1>
           </div>
         </header> */}
-        <section className="mx-auto max-w-6xl px-4 py-6">{children}</section>
+        <section className="mx-auto px-4">{children}</section>
       </main>
     </div>
     </SessionProvider>

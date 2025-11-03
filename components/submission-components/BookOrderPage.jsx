@@ -747,10 +747,9 @@ import {
   updateDoc,
   deleteDoc,
 } from "firebase/firestore";
-// import Sidebar from "@/app/_components/Sidebar";
 import Header from "../submission-components/Header";
 import TableUI from "../submission-components/TableUI";
-// import { useAuth } from "@/app/context/AuthContext";
+import { Sidebar } from "../admin/sidebar";
 
 // Firebase configuration
 const firebaseConfig = {
@@ -802,8 +801,6 @@ const DynamicBookOrderPage = () => {
     dateFrom: "",
     dateTo: "",
   });
-
-  // const { canEdit, canDelete, isAdmin, isViewer, userName, userRole } = useAuth();
 
   // Book configuration
   const bookConfigs = {
@@ -1256,24 +1253,20 @@ const DynamicBookOrderPage = () => {
           >
             <FaEye size={14} />
           </button>
-          {/* {canEdit && ( */}
-            <button
-              onClick={() => handleEdit(item, data.indexOf(item))}
-              className="p-1 text-blue-500 rounded"
-              title="Edit/Add Parcel ID"
-            >
-              <FaEdit size={14} />
-            </button>
-          {/* )} */}
-          {/* {canDelete && ( */}
-            <button
-              onClick={() => handleDelete(data.indexOf(item))}
-              className="p-1 text-red-500 rounded"
-              title="Delete Order"
-            >
-              <FaTrash size={14} />
-            </button>
-          {/* )} */}
+          <button
+            onClick={() => handleEdit(item, data.indexOf(item))}
+            className="p-1 text-blue-500 rounded"
+            title="Edit/Add Parcel ID"
+          >
+            <FaEdit size={14} />
+          </button>
+          <button
+            onClick={() => handleDelete(data.indexOf(item))}
+            className="p-1 text-red-500 rounded"
+            title="Delete Order"
+          >
+            <FaTrash size={14} />
+          </button>
         </div>
       );
 
@@ -1286,7 +1279,7 @@ const DynamicBookOrderPage = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen flex flex-col bg-white dark:bg-gray-900 transition-colors duration-200">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background transition-colors duration-200">
         <div className="flex-1">
           <div className="p-8 mt-20">
             <div className="max-w-2xl mx-auto bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6">
@@ -1308,7 +1301,7 @@ const DynamicBookOrderPage = () => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col font-anek bg-white dark:bg-gray-900 dark:text-gray-200 transition-colors duration-200">
+    <div className="min-h-screen flex flex-col items-center  font-anek bg-background text-foreground transition-colors duration-200">
       <div className="flex-1 transition-all duration-300">
         <Header
           totalCopies={calculateTotalCopies(filteredData)}
@@ -1317,9 +1310,10 @@ const DynamicBookOrderPage = () => {
           filteredRecords={filteredRecords}
           data={filteredData}
           title={bookName + " Book Orders"}
-          onFilterClick={() => setIsFilterPanelOpen(true)}
+          onFilterClick={() => setIsFilterPanelOpen(!isFilterPanelOpen)}
           activeFilterCount={getActiveFilterCount()}
         />
+        {/* <Sidebar/> */}
 
         {/* Status notification */}
         {updateStatus && (
@@ -1345,7 +1339,7 @@ const DynamicBookOrderPage = () => {
           </div>
         )}
 
-        {/* Filter Panel - keeping existing code */}
+        {/* Filter Panel */}
         {isFilterPanelOpen && (
           <>
             <div 
@@ -1353,15 +1347,14 @@ const DynamicBookOrderPage = () => {
               onClick={() => setIsFilterPanelOpen(false)}
             />
             
-            <div className={"fixed top-0 right-0 h-full w-full sm:w-96 bg-white dark:bg-gray-800 shadow-2xl z-50 transform transition-transform duration-300 ease-in-out " + (
+            <div className={"fixed top-0 right-0 h-full w-full sm:w-96 bg-card shadow-2xl z-50 transform transition-transform duration-300 ease-in-out " + (
               isFilterPanelOpen ? 'translate-x-0' : 'translate-x-full'
             )}>
-              {/* Filter panel content remains the same as original */}
               <div className="flex flex-col font-mono h-full">
-                <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+                <div className="flex items-center justify-between p-4 border-b border-border">
                   <div className="flex items-center gap-2">
                     <FaFilter className="text-blue-600 dark:text-blue-400" />
-                    <h2 className="text-lg font-bold">Filters</h2>
+                    <h2 className="text-lg font-bold text-foreground">Filters</h2>
                     {getActiveFilterCount() > 0 && (
                       <span className="bg-blue-600 text-white text-xs px-2 py-0.5 rounded-full">
                         {getActiveFilterCount()}
@@ -1370,153 +1363,48 @@ const DynamicBookOrderPage = () => {
                   </div>
                   <button
                     onClick={() => setIsFilterPanelOpen(false)}
-                    className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                    className="p-2 hover:bg-muted rounded-lg transition-colors"
                   >
                     <FaTimes size={18} />
                   </button>
                 </div>
 
-                 {/* Filter Content */}
+                {/* Filter Content */}
                 <div className="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-4">
                   {/* Delivery Type */}
                   <div>
-                    <label className="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">
+                    <label className="block text-sm font-semibold mb-2 text-foreground">
                       Delivery Type
                     </label>
                     <select
                       value={filters.deliveryType}
                       onChange={(e) => setFilters({...filters, deliveryType: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    >
-                      <option value="all">All Types</option>
-                      <option value="parcelId">Parcel</option>
-                      <option value="courierId">Courier</option>
-                      <option value="handtohand">Hand to Hand</option>
-                      <option value="unassigned">Unassigned</option>
-                    </select>
-                  </div>
-
-                  {/* Copies Range */}
-                  <div>
-                    <label className="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">
-                      Copies Range
-                    </label>
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <input
-                          type="number"
-                          placeholder="Min"
-                          min="0"
-                          value={filters.minCopies || ""}
-                          onChange={(e) => setFilters({...filters, minCopies: parseInt(e.target.value) || 0})}
-                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        />
-                      </div>
-                      <div>
-                        <input
-                          type="number"
-                          placeholder="Max"
-                          min="0"
-                          value={filters.maxCopies}
-                          onChange={(e) => setFilters({...filters, maxCopies: e.target.value ? parseInt(e.target.value) : ""})}
-                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Name Search */}
-                  <div>
-                    <label className="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">
-                      Search by Name
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="Enter name..."
-                      value={filters.searchName}
-                      onChange={(e) => setFilters({...filters, searchName: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  </div>
-
-                  {/* Mobile Search */}
-                  <div>
-                    <label className="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">
-                      Search by Mobile
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="Enter mobile number..."
-                      value={filters.searchMobile}
-                      onChange={(e) => setFilters({...filters, searchMobile: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  </div>
-
-                  {/* City */}
-                  <div>
-                    <label className="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">
-                      City
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="Enter city..."
-                      value={filters.city}
-                      onChange={(e) => setFilters({...filters, city: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  </div>
-
-                  {/* State */}
-                  <div>
-                    <label className="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">
-                      State
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="Enter state..."
-                      value={filters.state}
-                      onChange={(e) => setFilters({...filters, state: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  </div>
-
-                  {/* Pincode */}
-                  <div>
-                    <label className="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">
-                      Pincode
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="Enter pincode..."
-                      value={filters.pincode}
-                      onChange={(e) => setFilters({...filters, pincode: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
                   </div>
 
                   {/* Date Range */}
                   <div>
-                    <label className="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">
+                    <label className="block text-sm font-semibold mb-2 text-foreground">
                       Date Range
                     </label>
                     <div className="space-y-2">
                       <div>
-                        <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">From</label>
+                        <label className="block text-xs text-muted-foreground mb-1">From</label>
                         <input
                           type="date"
                           value={filters.dateFrom}
                           onChange={(e) => setFilters({...filters, dateFrom: e.target.value})}
-                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         />
                       </div>
                       <div>
-                        <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">To</label>
+                        <label className="block text-xs text-muted-foreground mb-1">To</label>
                         <input
                           type="date"
                           value={filters.dateTo}
                           onChange={(e) => setFilters({...filters, dateTo: e.target.value})}
-                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         />
                       </div>
                     </div>
@@ -1533,10 +1421,10 @@ const DynamicBookOrderPage = () => {
                   </div>
                 </div>
 
-                <div className="p-4 border-t border-gray-200 dark:border-gray-700 space-y-2">
+                <div className="p-4 border-t border-border space-y-2">
                   <button
                     onClick={resetFilters}
-                    className="w-full px-4 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-lg font-medium transition-colors"
+                    className="w-full px-4 py-2 bg-muted hover:bg-muted/80 text-foreground rounded-lg font-medium transition-colors"
                   >
                     Reset All Filters
                   </button>
@@ -1557,7 +1445,7 @@ const DynamicBookOrderPage = () => {
             <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-blue-500"></div>
           </div>
         ) : (
-          <div className="overflow-x-auto w-full mt-24 sm:mt-20 px-2 sm:px-4">
+          <div className="overflow-x-auto w-full mt-24 sm:mt-4 px-2 ">
             <TableUI
               data={prepareDataWithActions()}
               loading={loading}
@@ -1571,15 +1459,15 @@ const DynamicBookOrderPage = () => {
           </div>
         )}
 
-               {/* Edit Modal */}
+        {/* Edit Modal */}
         {editModalOpen && (
-          <div className="fixed inset-0 bg-opacity-50 flex items-center justify-center z-50 animate-fadeIn bg-white dark:bg-gray-900/40 dark:text-gray-200">
-            <div className="rounded-sm font-anek p-6 w-full max-w-md animate-scaleIn bg-gray-100 dark:bg-gray-800 dark:text-gray-200 shadow-lg border">
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 animate-fadeIn">
+            <div className="rounded-sm font-anek p-6 w-full max-w-md animate-scaleIn bg-card shadow-lg border border-border">
               <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-bold">Add Parcel Information</h2>
+                <h2 className="text-xl font-bold text-foreground">Add Parcel Information</h2>
                 <button
                   onClick={() => setEditModalOpen(false)}
-                  className="p-1 rounded-full"
+                  className="p-1 rounded-full hover:bg-muted"
                 >
                   <FaTimes size={20} />
                 </button>
@@ -1587,7 +1475,7 @@ const DynamicBookOrderPage = () => {
 
               <div className="mb-4">
                 <label
-                  className="block text-sm font-bold mb-2"
+                  className="block text-sm font-bold mb-2 text-foreground"
                   htmlFor="deliveryType"
                 >
                   Delivery Type
@@ -1596,7 +1484,7 @@ const DynamicBookOrderPage = () => {
                   id="deliveryType"
                   value={deliveryType}
                   onChange={(e) => setDeliveryType(e.target.value)}
-                  className="bg-white dark:bg-gray-900 dark:text-gray-200 shadow appearance-none border rounded w-full py-2 px-3 leading-tight focus:outline-none focus:shadow-outline"
+                  className="bg-background text-foreground shadow appearance-none border border-border rounded w-full py-2 px-3 leading-tight focus:outline-none focus:shadow-outline"
                 >
                   <option value="parcelId">Parcel ID</option>
                   <option value="courierId">Courier ID</option>
@@ -1607,7 +1495,7 @@ const DynamicBookOrderPage = () => {
               {deliveryType !== "handtohand" && (
                 <div className="mb-4">
                   <label
-                    className="block text-sm font-bold mb-2"
+                    className="block text-sm font-bold mb-2 text-foreground"
                     htmlFor="parcelId"
                   >
                     {deliveryType === "parcelId"
@@ -1619,7 +1507,7 @@ const DynamicBookOrderPage = () => {
                     type="text"
                     value={parcelId}
                     onChange={(e) => setParcelId(e.target.value)}
-                    className="bg-white dark:bg-gray-900 dark:text-gray-200 shadow appearance-none border placeholder:text-sm rounded w-full py-2 px-3 leading-tight focus:outline-none focus:shadow-outline"
+                    className="bg-background text-foreground shadow appearance-none border border-border placeholder:text-sm rounded w-full py-2 px-3 leading-tight focus:outline-none focus:shadow-outline"
                     placeholder={
                       deliveryType === "parcelId"
                         ? "Enter parcel tracking ID"
@@ -1649,13 +1537,13 @@ const DynamicBookOrderPage = () => {
 
         {/* View Details Modal */}
         {viewModalOpen && (
-          <div className="bg-white dark:bg-gray-900/40 dark:text-gray-200 fixed inset-0 text-sm bg-opacity-50 flex font-anek items-center justify-center z-50 animate-fadeIn">
-            <div className="bg-gray-200 border dark:bg-gray-800 dark:text-gray-200 rounded-lg p-6 w-full max-w-md animate-scaleIn">
+          <div className="fixed inset-0 bg-black/50 text-sm flex font-anek items-center justify-center z-50 animate-fadeIn">
+            <div className="bg-card rounded-lg p-6 w-full max-w-md animate-scaleIn border border-border">
               <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-bold">Order Details</h2>
+                <h2 className="text-xl font-bold text-foreground">Order Details</h2>
                 <button
                   onClick={() => setViewModalOpen(false)}
-                  className="p-1 rounded-full"
+                  className="p-1 rounded-full hover:bg-muted"
                 >
                   <FaTimes size={20} />
                 </button>
@@ -1664,30 +1552,30 @@ const DynamicBookOrderPage = () => {
               <div className="mb-4 p-4 rounded-lg">
                 <div className="grid grid-cols-3 gap-2 mb-2">
                   <div className="col-span-3">
-                    <p className="text-sm">Name</p>
-                    <p className="font-medium">
+                    <p className="text-sm text-muted-foreground">Name</p>
+                    <p className="font-medium text-foreground">
                       {currentViewItem?.["नाम"]}{" "}
                       {currentViewItem?.["उपनाम"] || ""}
                     </p>
                   </div>
                   <div className="col-span-3">
-                    <p className="text-sm">Mobile Number</p>
-                    <p className="font-medium">
+                    <p className="text-sm text-muted-foreground">Mobile Number</p>
+                    <p className="font-medium text-foreground">
                       {currentViewItem?.["मोबाइल नंबर"]}
                     </p>
                   </div>
                   <div className="col-span-3">
-                    <p className="text-sm">City</p>
-                    <p className="font-medium">{currentViewItem?.["शहर"]}</p>
+                    <p className="text-sm text-muted-foreground">City</p>
+                    <p className="font-medium text-foreground">{currentViewItem?.["शहर"]}</p>
                   </div>
                   
                   {bookConfig.hasBookQuantities && (
                     <div className="col-span-3">
-                      <p className="text-sm font-semibold mb-1">Book Quantities</p>
+                      <p className="text-sm font-semibold mb-1 text-foreground">Book Quantities</p>
                       {bookConfig.bookQuantityFields.map((field) => (
                         <div key={field.key} className="flex justify-between text-sm mb-1">
-                          <span>{field.label}:</span>
-                          <span className="font-medium">
+                          <span className="text-muted-foreground">{field.label}:</span>
+                          <span className="font-medium text-foreground">
                             {currentViewItem?.book_quantities?.[field.key] || 0}
                           </span>
                         </div>
@@ -1697,28 +1585,28 @@ const DynamicBookOrderPage = () => {
                   
                   {bookConfig.hasCopies && (
                     <div className="col-span-3">
-                      <p className="text-sm">Copies</p>
-                      <p className="font-medium">{currentViewItem?.["નકલ"] || currentViewItem?.["नकल"]}</p>
+                      <p className="text-sm text-muted-foreground">Copies</p>
+                      <p className="font-medium text-foreground">{currentViewItem?.["નકલ"] || currentViewItem?.["नकल"]}</p>
                     </div>
                   )}
                   
                   <div className="col-span-3">
-                    <p className="text-sm">Address</p>
-                    <p className="font-medium">{currentViewItem?.["એડ્રેસ"]}</p>
+                    <p className="text-sm text-muted-foreground">Address</p>
+                    <p  className="font-medium text-foreground">{currentViewItem?.["એડ્રેસ"]}</p>
                   </div>
                   <div className="col-span-1">
-                    <p className="text-sm">Pincode</p>
-                    <p className="font-medium">
+                    <p className="text-sm text-muted-foreground">Pincode</p>
+                    <p className="font-medium text-foreground">
                       {currentViewItem?.["पिनकोड"]}
                     </p>
                   </div>
                   <div className="col-span-2">
-                    <p className="text-sm">State</p>
-                    <p className="font-medium">{currentViewItem?.["राज्य"]}</p>
+                    <p className="text-sm text-muted-foreground">State</p>
+                    <p className="font-medium text-foreground">{currentViewItem?.["राज्य"]}</p>
                   </div>
                   <div className="col-span-3">
-                    <p className="text-sm">Parcel ID</p>
-                    <p className="font-medium">
+                    <p className="text-sm text-muted-foreground">Parcel ID</p>
+                    <p className="font-medium text-foreground">
                       {currentViewItem?.parcelId ? (
                         <span className="text-xs font-medium py-1 px-2 rounded-sm">
                           {currentViewItem.parcelId}
@@ -1729,8 +1617,8 @@ const DynamicBookOrderPage = () => {
                     </p>
                   </div>
                   <div className="col-span-3">
-                    <p className="text-sm">Order Date</p>
-                    <p className="font-medium">
+                    <p className="text-sm text-muted-foreground">Order Date</p>
+                    <p className="font-medium text-foreground">
                       {currentViewItem?.timestamp &&
                         `${new Date(
                           currentViewItem.timestamp
@@ -1768,20 +1656,20 @@ const DynamicBookOrderPage = () => {
 
         {/* Delete Modal */}
         {deleteModalOpen && (
-          <div className="bg-white dark:bg-gray-900/40 dark:text-gray-200 fixed inset-0 bg-opacity-50 flex items-center justify-center z-50 animate-fadeIn">
-            <div className="bg-gray-200 border dark:bg-gray-800 dark:text-gray-200 rounded-sm font-anek p-6 w-full max-w-md animate-scaleIn">
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 animate-fadeIn">
+            <div className="bg-card border border-border rounded-sm font-anek p-6 w-full max-w-md animate-scaleIn">
               <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-bold">Confirm Deletion</h2>
+                <h2 className="text-xl font-bold text-foreground">Confirm Deletion</h2>
                 <button
                   onClick={() => setDeleteModalOpen(false)}
-                  className="p-1 rounded-full hover:bg-gray-700"
+                  className="p-1 rounded-full hover:bg-muted"
                 >
                   <FaTimes size={20} />
                 </button>
               </div>
 
               <div className="mb-6">
-                <p>
+                <p className="text-foreground">
                   Are you sure you want to delete this order? This action cannot
                   be undone.
                 </p>
@@ -1790,7 +1678,7 @@ const DynamicBookOrderPage = () => {
               <div className="flex justify-end gap-2">
                 <button
                   onClick={() => setDeleteModalOpen(false)}
-                  className="bg-gray-600 hover:bg-gray-700 text-white text-sm font-semibold py-1 px-4 rounded-sm"
+                  className="bg-muted hover:bg-muted/80 text-foreground text-sm font-semibold py-1 px-4 rounded-sm"
                 >
                   Cancel
                 </button>
@@ -1806,31 +1694,46 @@ const DynamicBookOrderPage = () => {
         )}
       </div>
 
-      <style jsx>{"\
-        @keyframes fadeIn {\
-          from { opacity: 0; }\
-          to { opacity: 1; }\
-        }\
-        \
-        @keyframes scaleIn {\
-          from { \
-            opacity: 0;\
-            transform: scale(0.95);\
-          }\
-          to { \
-            opacity: 1;\
-            transform: scale(1);\
-          }\
-        }\
-        \
-        .animate-fadeIn {\
-          animation: fadeIn 0.2s ease-out;\
-        }\
-        \
-        .animate-scaleIn {\
-          animation: scaleIn 0.2s ease-out;\
-        }\
-      "}</style>
+      <style jsx>{`
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        
+        @keyframes scaleIn {
+          from { 
+            opacity: 0;
+            transform: scale(0.95);
+          }
+          to { 
+            opacity: 1;
+            transform: scale(1);
+          }
+        }
+        
+        .animate-fadeIn {
+          animation: fadeIn 0.2s ease-out;
+        }
+        
+        .animate-scaleIn {
+          animation: scaleIn 0.2s ease-out;
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 8px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: hsl(var(--muted));
+          border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: hsl(var(--muted-foreground) / 0.3);
+          border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: hsl(var(--muted-foreground) / 0.5);
+        }
+      `}</style>
     </div>
   );
 };

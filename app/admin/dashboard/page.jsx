@@ -63,8 +63,8 @@ const Dashboard = () => {
   // Loading state
   if (loading) {
     return (
-      <div className="min-h-screen  font-anek p-6">
-        <div className="max-w-7xl mx-auto">
+      <div className="min-h-screen  font-poppins">
+        <div className=" mx-auto">
           <div className="flex items-center justify-center h-64">
             <div className="text-center">
               <Loader2 className="h-12 w-12 animate-spin  mx-auto mb-4" />
@@ -79,8 +79,8 @@ const Dashboard = () => {
   // Error state
   if (error) {
     return (
-      <div className="min-h-screen  font-anek p-6">
-        <div className="max-w-7xl mx-auto">
+      <div className="min-h-screen  font-poppins">
+        <div className="mx-auto">
           <div className="flex items-center justify-center h-64">
             <div className="text-center">
               <p className="text-red-600 mb-2">Error loading forms</p>
@@ -93,8 +93,8 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="min-h-screen  font-anek p-6">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen py-6 font-poppins">
+      <div className=" mx-auto">
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold  mb-2">Forms Dashboard</h1>
@@ -144,7 +144,7 @@ const Dashboard = () => {
         ) : (
           <>
             {/* Forms Grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 font-anek lg:grid-cols-2 xl:grid-cols-3 gap-6">
               {formsData.map((form) => (
                 <div 
                   key={form.id} 
