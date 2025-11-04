@@ -109,7 +109,7 @@ const Dashboard = () => {
         throw new Error("Firebase is not initialized");
       }
 
-      // Fetch collection patterns from Cloud Function
+      // Fetch collection patterns
       const response = await fetch(
         "https://getbookordercollections-fahifz22ha-uc.a.run.app/"
       );
@@ -155,7 +155,7 @@ const Dashboard = () => {
 
             totalRecentOrders += recentOrders;
 
-            // Track customer orders
+            // Track reader orders
             snapshot.docs.forEach((doc) => {
               const data = doc.data();
               const customerName = data["नाम"] || "";
@@ -206,7 +206,7 @@ const Dashboard = () => {
         );
       }
 
-      // Get top customers with 5+ orders
+      // Get top reader with 5+ orders
       const customersArray = Array.from(customerOrderMap.values())
         .filter((customer) => customer.count >= foundCollections.length - 2)
         .sort((a, b) => b.count - a.count);
@@ -521,7 +521,7 @@ const Dashboard = () => {
           </div>
         )}
 
-        {/* Recent Orders Summary Card - Clickable */}
+        {/* Recent Orders Summary Card */}
         <Link href="/pages/recent-orders">
           <div className="bg-card hover:bg-muted/50 rounded-xl shadow-lg mt-6 p-6 cursor-pointer transition-all duration-200 border-2 border-border hover:border-green-500">
             <div className="flex items-center justify-between">
