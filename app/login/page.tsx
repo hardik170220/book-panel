@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import { Eye, EyeOff, Lock, Mail } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { signIn, useSession } from "next-auth/react";
 
 interface FormData {
@@ -21,10 +21,16 @@ const APDashboardLogin: React.FC = () => {
   const [error, setError] = useState<string>("");
 
   const router = useRouter();
+  const pathname = usePathname();
   const { data: session, status } = useSession();
 
-  // ✅ If already logged in, redirect based on role
+  // ✅ CRITICAL: Only redirect if we're actually ON the login page
   useEffect(() => {
+    // Don't redirect if not on login page
+    if (pathname !== "/" && pathname !== "/login") {
+      return;
+    }
+
     if (status === "authenticated" && session?.user?.role) {
       if (session.user.role === "submission-admin") {
         router.replace("/admin/bookorder");
@@ -32,18 +38,21 @@ const APDashboardLogin: React.FC = () => {
         router.replace("/admin/dashboard");
       }
     }
-  }, [status, session, router]);
+  }, [status, session, router, pathname]); // Added pathname to deps
 
   // ✅ Show nothing while checking session (avoids flicker)
-  if (status === "loading" || (status === "authenticated" && !session?.user?.role)) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-900 text-white">
-        <div className="text-center">
-          <div className="w-8 h-8 border-2 border-white border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
-          Checking session...
+  // BUT ONLY ON LOGIN PAGE
+  if (pathname === "/" || pathname === "/login") {
+    if (status === "loading" || (status === "authenticated" && !session?.user?.role)) {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-gray-900 text-white">
+          <div className="text-center">
+            <div className="w-8 h-8 border-2 border-white border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
+            Checking session...
+          </div>
         </div>
-      </div>
-    );
+      );
+    }
   }
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -115,9 +124,6 @@ const APDashboardLogin: React.FC = () => {
                 <img src="/logo.png" className="h-12" alt="AP" />
               </div>
               <h1 className="text-2xl font-bold mb-2">Ap Book Panel</h1>
-              {/* <p className="text-gray-300 text-sm">
-                Access your administrative panel
-              </p> */}
             </div>
           </div>
 
@@ -149,7 +155,7 @@ const APDashboardLogin: React.FC = () => {
                     value={formData.email}
                     onChange={handleInputChange}
                     className="w-full pl-12 pr-4 placeholder:text-sm py-2 border text-gray-900 border-gray-300 rounded-sm focus:ring-2 focus:ring-gray-800 focus:border-transparent outline-none transition-all duration-200 bg-gray-50 focus:bg-white placeholder-gray-400"
-                    placeholder="First Name..."
+                    placeholder="Enter email..."
                     required
                     disabled={isLoading}
                   />
@@ -193,8 +199,6 @@ const APDashboardLogin: React.FC = () => {
                   </button>
                 </div>
               </div>
-
-             
 
               {/* Submit Button */}
               <button
