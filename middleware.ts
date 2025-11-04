@@ -48,26 +48,36 @@ export default withAuth(
     const { pathname } = req.nextUrl
     const role = req.nextauth.token?.role
 
+    // Debug logging (remove in production after fixing)
+    console.log("Middleware:", { pathname, role, fullUrl: req.url })
+
+    // Early return for submission-admin accessing bookorder routes
+    // This MUST come first to prevent unwanted redirects
+    if (pathname.startsWith("/admin/bookorder") && role === "submission-admin") {
+      return NextResponse.next()
+    }
+
+    // Early return for super admin - they can access everything
+    if (role === "super admin") {
+      return NextResponse.next()
+    }
+
     // Redirect submission-admin trying to access non-bookorder admin routes
-    if (
-      pathname.startsWith("/admin") &&
-      !pathname.startsWith("/admin/bookorder") &&
-      role === "submission-admin"
-    ) {
+    if (pathname.startsWith("/admin") && role === "submission-admin") {
       const url = new URL("/admin/bookorder", req.url)
       return NextResponse.redirect(url)
     }
 
-    // Access control for forms and dashboard
+    // Access control for forms and dashboard (formbuilder-admin only)
     if (pathname.startsWith("/admin/forms") || pathname.startsWith("/admin/dashboard")) {
-      if (role !== "formbuilder-admin" && role !== "super admin") {
+      if (role !== "formbuilder-admin") {
         return NextResponse.redirect(new URL("/access-denied", req.url))
       }
     }
 
-    // Access control for bookorder
+    // Access control for bookorder (submission-admin only)
     if (pathname.startsWith("/admin/bookorder")) {
-      if (role !== "submission-admin" && role !== "super admin") {
+      if (role !== "submission-admin") {
         return NextResponse.redirect(new URL("/access-denied", req.url))
       }
     }
@@ -79,11 +89,11 @@ export default withAuth(
       authorized: ({ token }) => !!token,
     },
     pages: {
-      signIn: "/login", // Your login page path
+      signIn: "/login",
     },
   }
 )
 
 export const config = {
-  matcher: ["/admin/:path*", "/bookorder/:path*"],
+  matcher: ["/admin/:path*"],
 }
