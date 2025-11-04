@@ -56,6 +56,12 @@ export function Sidebar() {
     }
   }, [user, pathname, router, status])
 
+  useEffect(() => {
+  console.log("Session status:", status)
+  console.log("User role:", session?.user?.role)
+  console.log("Current path:", pathname)
+}, [status, session, pathname])
+
   const allItems = [
     {
       href: "/admin/dashboard",
