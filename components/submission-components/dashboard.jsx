@@ -440,8 +440,7 @@ const Dashboard = () => {
   return (
     <div className="min-h-screen bg-background transition-colors duration-200">
       <Header />
-      <div className="p-4 md:p-6 space-y-6">
-        {/* Migration Status Banner */}
+      {/* <div className="p-4 md:p-6 space-y-6">
         {(migrationStatus.isRunning || migrationStatus.progress || migrationStatus.error) && (
           <div className={`rounded-xl shadow-lg p-6 ${
             migrationStatus.error ? 'bg-red-100 dark:bg-red-900' :
@@ -468,7 +467,6 @@ const Dashboard = () => {
           </div>
         )}
 
-        {/* Migration Button */}
         <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl shadow-lg p-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
@@ -497,7 +495,7 @@ const Dashboard = () => {
             </button>
           </div>
         </div>
-        </div>
+        </div> */}
 
       <div className="p-4 md:p-6 space-y-6 ">
         {/* Key Metrics */}
