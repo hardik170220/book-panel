@@ -202,14 +202,8 @@ function getFormLink(slug: any) {
     return "https://universalform-fahifz22ha-uc.a.run.app?form=sanskrutam-saralam";
   } 
   
-  // For all other slugs, convert to camelCase
-  const formattedSlug = slug
-    .split('-')
-    .map((word: string, index: number) => 
-      index === 0 ? word : word.charAt(0).toUpperCase() + word.slice(1)
-    )
-    .join('');
-  
+  // For all other slugs, just remove hyphens
+  const formattedSlug = slug.replace(/-/g, '');
   return `https://universalform-fahifz22ha-uc.a.run.app?form=${formattedSlug}`;
 }
 
