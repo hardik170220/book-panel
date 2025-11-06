@@ -17,6 +17,7 @@ import {
   FaUserCircle,
   FaStar,
   FaCrown,
+  FaDatabase,
 } from "react-icons/fa";
 import {
   BarChart,
@@ -39,7 +40,7 @@ import {
 
 // Firebase imports
 import { initializeApp } from "firebase/app";
-import { getFirestore, collection, getDocs } from "firebase/firestore";
+import { getFirestore, collection, getDocs, addDoc } from "firebase/firestore";
 import Link from "next/link";
 import Header from "./Header";
 
@@ -95,10 +96,108 @@ const Dashboard = () => {
   const [discoveredCollections, setDiscoveredCollections] = useState([]);
   const [recentOrdersCount, setRecentOrdersCount] = useState(0);
   const [topCustomers, setTopCustomers] = useState([]);
+  const [migrationStatus, setMigrationStatus] = useState({
+    isRunning: false,
+    progress: "",
+    completed: false,
+    error: null,
+  });
 
   useEffect(() => {
-    loadBookOrderData();
+    initializeDashboard();
   }, []);
+
+  // Migration function
+  const migrateBookOrders = async (bookCollections) => {
+    if (!db) {
+      throw new Error("Firebase is not initialized");
+    }
+
+    setMigrationStatus({
+      isRunning: true,
+      progress: "Starting migration...",
+      completed: false,
+      error: null,
+    });
+
+    try {
+      for (const collectionName of bookCollections) {
+        const bookName = collectionName.replace("-bookorder", "");
+        
+        setMigrationStatus(prev => ({
+          ...prev,
+          progress: `📚 Migrating ${collectionName}...`,
+        }));
+
+        try {
+          const snapshot = await getDocs(collection(db, collectionName));
+          
+          console.log(`📚 Migrating from ${collectionName} (${snapshot.size} docs)`);
+
+          let migratedCount = 0;
+          for (const doc of snapshot.docs) {
+            const data = doc.data();
+            
+            // Write to new 'bookorders' collection
+            await addDoc(collection(db, "bookorders"), {
+              ...data,
+              bookName,
+              originalCollection: collectionName,
+              migratedAt: new Date(),
+            });
+            
+            migratedCount++;
+            
+            // Update progress every 10 documents
+            if (migratedCount % 10 === 0) {
+              setMigrationStatus(prev => ({
+                ...prev,
+                progress: `📚 Migrating ${collectionName}: ${migratedCount}/${snapshot.size} docs`,
+              }));
+            }
+          }
+
+          console.log(`✅ Finished migrating ${collectionName}: ${migratedCount} documents`);
+          
+        } catch (collectionError) {
+          console.error(`Error migrating ${collectionName}:`, collectionError);
+          // Continue with next collection even if one fails
+        }
+      }
+
+      setMigrationStatus({
+        isRunning: false,
+        progress: "🎉 Migration complete!",
+        completed: true,
+        error: null,
+      });
+
+      console.log("🎉 Migration complete!");
+      
+      // Wait 3 seconds then reload data
+      setTimeout(() => {
+        setMigrationStatus(prev => ({ ...prev, progress: "" }));
+      }, 3000);
+
+    } catch (error) {
+      console.error("Migration error:", error);
+      setMigrationStatus({
+        isRunning: false,
+        progress: "",
+        completed: false,
+        error: error.message,
+      });
+    }
+  };
+
+  const initializeDashboard = async () => {
+    try {
+      await loadBookOrderData();
+      // Migration will be triggered only when button is clicked
+    } catch (error) {
+      console.error("Dashboard initialization error:", error);
+    }
+  };
 
   const loadBookOrderData = async () => {
     try {
@@ -231,6 +330,14 @@ const Dashboard = () => {
     }
   };
 
+  const handleMigration = () => {
+    if (discoveredCollections.length > 0) {
+      migrateBookOrders(discoveredCollections);
+    } else {
+      alert("No collections found to migrate. Please load data first.");
+    }
+  };
+
   // Calculate metrics
   const totalOrders = Object.values(bookData).reduce(
     (sum, book) => sum + book.total,
@@ -333,6 +440,64 @@ const Dashboard = () => {
   return (
     <div className="min-h-screen bg-background transition-colors duration-200">
       <Header />
+      <div className="p-4 md:p-6 space-y-6">
+        {/* Migration Status Banner */}
+        {(migrationStatus.isRunning || migrationStatus.progress || migrationStatus.error) && (
+          <div className={`rounded-xl shadow-lg p-6 ${
+            migrationStatus.error ? 'bg-red-100 dark:bg-red-900' :
+            migrationStatus.completed ? 'bg-green-100 dark:bg-green-900' :
+            'bg-blue-100 dark:bg-blue-900'
+          }`}>
+            <div className="flex items-center gap-3">
+              {migrationStatus.isRunning && (
+                <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-blue-600"></div>
+              )}
+              <FaDatabase className={`text-2xl ${
+                migrationStatus.error ? 'text-red-600' :
+                migrationStatus.completed ? 'text-green-600' :
+                'text-blue-600'
+              }`} />
+              <p className={`font-semibold ${
+                migrationStatus.error ? 'text-red-800 dark:text-red-200' :
+                migrationStatus.completed ? 'text-green-800 dark:text-green-200' :
+                'text-blue-800 dark:text-blue-200'
+              }`}>
+                {migrationStatus.error ? `Migration Error: ${migrationStatus.error}` : migrationStatus.progress}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Migration Button */}
+        <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl shadow-lg p-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="bg-white/20 backdrop-blur-sm rounded-lg p-3">
+                <FaDatabase className="text-white text-3xl" />
+              </div>
+              <div>
+                <h3 className="text-2xl font-bold text-white">
+                  Database Migration
+                </h3>
+                <p className="text-purple-100 text-sm mt-1">
+                  Migrate {discoveredCollections.length} collections to unified 'bookorders' collection
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={handleMigration}
+              disabled={migrationStatus.isRunning || discoveredCollections.length === 0}
+              className={`px-6 py-3 rounded-lg font-semibold text-white transition-all duration-200 ${
+                migrationStatus.isRunning || discoveredCollections.length === 0
+                  ? 'bg-gray-400 cursor-not-allowed'
+                  : 'bg-white/20 hover:bg-white/30 backdrop-blur-sm'
+              }`}
+            >
+              {migrationStatus.isRunning ? 'Migrating...' : 'Start Migration'}
+            </button>
+          </div>
+        </div>
+        </div>
 
       <div className="p-4 md:p-6 space-y-6 ">
         {/* Key Metrics */}
