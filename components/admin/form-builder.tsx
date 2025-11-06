@@ -175,23 +175,42 @@ export function FormBuilder({
     });
   }
 
-        function getFormLink(slug :any) {
-  if (slug === "bhagwan-mahavir") {
-    return "https://bhagwanmahavirform-fahifz22ha-uc.a.run.app";
-  } else if (slug === "udayanmantri") {
-    return "https://udayanmantriform-fahifz22ha-uc.a.run.app";
-  } else if (slug === "mahabharat") {
-    return "https://mahabharatform-fahifz22ha-uc.a.run.app";
-  } else if (slug === "ravanni-bhitarma") {
-    return "https://ravannibhitarmaform-fahifz22ha-uc.a.run.app";
-  }else if (slug === "aapno-gyanvaibhav") {
-    return "https://universalform-fahifz22ha-uc.a.run.app/aapnoGyanvaibhavForm";
-  }
-   else if (slug === "calendar-2082") {
-    return "https://calendar2082form-fahifz22ha-uc.a.run.app";
-  } else {
-    return `https://universalform-fahifz22ha-uc.a.run.app/${slug}`;
-  }
+//         function getFormLink(slug :any) {
+//   if (slug === "bhagwan-mahavir") {
+//     return "https://bhagwanmahavirform-fahifz22ha-uc.a.run.app";
+//   } else if (slug === "udayanmantri") {
+//     return "https://udayanmantriform-fahifz22ha-uc.a.run.app";
+//   } else if (slug === "mahabharat") {
+//     return "https://mahabharatform-fahifz22ha-uc.a.run.app";
+//   } else if (slug === "ravanni-bhitarma") {
+//     return "https://ravannibhitarmaform-fahifz22ha-uc.a.run.app";
+//   }else if (slug === "aapno-gyanvaibhav") {
+//     return "https://universalform-fahifz22ha-uc.a.run.app/aapnoGyanvaibhavForm";
+//   }
+//    else if (slug === "calendar-2082") {
+//     return "https://calendar2082form-fahifz22ha-uc.a.run.app";
+//   } else {
+//     return `https://universalform-fahifz22ha-uc.a.run.app/${slug}`;
+//   }
+// }
+
+function getFormLink(slug: any) {
+  // Special cases with fixed slug names
+  if (slug === "aapno-gyanvaibhav") {
+    return "https://universalform-fahifz22ha-uc.a.run.app?form=aapnoGyanvaibhavForm";
+  } else if (slug === "sanskrutam-saralam") {
+    return "https://universalform-fahifz22ha-uc.a.run.app?form=sanskrutam-saralam";
+  } 
+  
+  // For all other slugs, convert to camelCase
+  const formattedSlug = slug
+    .split('-')
+    .map((word: string, index: number) => 
+      index === 0 ? word : word.charAt(0).toUpperCase() + word.slice(1)
+    )
+    .join('');
+  
+  return `https://universalform-fahifz22ha-uc.a.run.app?form=${formattedSlug}`;
 }
 
   function reset() {
