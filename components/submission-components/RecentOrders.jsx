@@ -8,7 +8,7 @@ import {
   FaChevronRight,
 } from "react-icons/fa";
 import { initializeApp } from "firebase/app";
-import { getFirestore, collection, getDocs } from "firebase/firestore";
+import { getFirestore, collection, getDocs, query, where } from "firebase/firestore";
 import Header from "./Header";
 
 // Firebase configuration
@@ -200,15 +200,19 @@ const RecentOrdersPage = () => {
     setCurrentPage(1);
   }, [selectedFilter]);
 
-  const formatDisplayName = (collectionName) => {
-    let name = collectionName.replace(/-bookorder$/i, "");
-    if (name.includes("calendar")) {
-      return name.replace("calendar", "Panchang ");
+  const formatDisplayName = (bookName) => {
+    // Handle calendar format
+    if (bookName.includes("calendar")) {
+      return bookName.replace("calendar", "Panchang ");
     }
-    return name
-      .split("-")
+    // Handle other book names - convert camelCase or kebab-case to readable format
+    return bookName
+      .replace(/([A-Z])/g, ' $1')
+      .replace(/[-_]/g, ' ')
+      .split(' ')
       .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(" ");
+      .join(' ')
+      .trim();
   };
 
   const loadCollectionsAndOrders = async () => {
@@ -220,52 +224,40 @@ const RecentOrdersPage = () => {
         throw new Error("Firebase is not initialized");
       }
 
-      // Fetch collection patterns
-      const response = await fetch(
-        "https://getbookordercollections-fahifz22ha-uc.a.run.app/"
-      );
-      const collectionData = await response.json();
+      // Fetch all orders from the single 'bookorders' collection
+      const ordersCollection = collection(db, "bookorders");
+      const snapshot = await getDocs(ordersCollection);
 
-      if (!collectionData.success) {
-        throw new Error("Failed to fetch collection patterns");
+      if (snapshot.size === 0) {
+        setRecentOrders([]);
+        setDiscoveredCollections([]);
+        return;
       }
 
-      const COLLECTION_PATTERNS = collectionData.collections;
-      const foundCollections = [];
       const allOrders = [];
+      const uniqueBooks = new Set();
 
-      // Fetch orders from all collections
-      for (const collectionName of COLLECTION_PATTERNS) {
-        try {
-          const ordersCollection = collection(db, collectionName);
-          const snapshot = await getDocs(ordersCollection);
+      snapshot.docs.forEach((doc) => {
+        const data = doc.data();
+        const bookName = data.bookName || "Unknown Book";
+        uniqueBooks.add(bookName);
 
-          if (snapshot.size > 0) {
-            foundCollections.push(collectionName);
-
-            snapshot.docs.forEach((doc) => {
-              const data = doc.data();
-              allOrders.push({
-                id: doc.id,
-                bookName: formatDisplayName(collectionName),
-                collectionName: collectionName,
-                name: data["नाम"] || "N/A",
-                phone: data["मोबाइल नंबर"] || "N/A",
-                address: data["એડ્રેસ/एड्रेस"] || "N/A",
-                city: data["शहर"] || "",
-                state: data["राज्य"] || "",
-                pincode: data["पिनकोड"] || "",
-                quantity: data["નકલ"] || 1,
-                parcelId: data.parcelId || "",
-                isShipped: data.parcelId && data.parcelId.trim() !== "",
-                timestamp: data.timestamp || data.createdAt || new Date().getTime(),
-              });
-            });
-          }
-        } catch (err) {
-          console.log(`Error fetching from ${collectionName}:`, err);
-        }
-      }
+        allOrders.push({
+          id: doc.id,
+          bookName: formatDisplayName(bookName),
+          rawBookName: bookName,
+          name: data["नाम"] || data["उपनाम"] || "N/A",
+          phone: data["मोबाइल नंबर"] || "N/A",
+          address: data["એડ્રેસ/एड्रेस"] || "N/A",
+          city: data["शहर"] || "",
+          state: data["राज्य"] || "",
+          pincode: data["पिनकोड"] || "",
+          quantity: data["નકલ"] || 1,
+          parcelId: data.parcelId || "",
+          isShipped: data.parcelId && data.parcelId.trim() !== "",
+          timestamp: data.timestamp || data.migratedAt || data.createdAt || new Date().getTime(),
+        });
+      });
 
       // Sort by timestamp (most recent first)
       allOrders.sort((a, b) => {
@@ -276,7 +268,7 @@ const RecentOrdersPage = () => {
         return timeB - timeA;
       });
 
-      setDiscoveredCollections(foundCollections);
+      setDiscoveredCollections(Array.from(uniqueBooks));
       setRecentOrders(allOrders);
     } catch (error) {
       console.error("Error loading orders:", error);
@@ -452,7 +444,7 @@ const RecentOrdersPage = () => {
                     <tbody>
                       {currentOrders.map((order) => (
                         <tr
-                          key={`${order.collectionName}-${order.id}`}
+                          key={order.id}
                           className="border-b border-border hover:bg-muted/50 transition-colors duration-150"
                         >
                           <td className="p-2 whitespace-nowrap text-green-700 dark:text-green-400 font-bold align-middle">

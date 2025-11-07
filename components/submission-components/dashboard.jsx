@@ -41,6 +41,7 @@ import {
 import { initializeApp } from "firebase/app";
 import Header from "../submission-components/Header";
 import { getFirestore, collection, getDocs, query, where } from "firebase/firestore";
+import Link from "next/link";
 
 // Firebase configuration
 const firebaseConfig = {
@@ -313,11 +314,9 @@ const Dashboard = () => {
           </div>
         </div>
         <p className="mt-4 text-lg text-gray-700 dark:text-gray-300">
-          Loading unified order data...
+          Loading order data...
         </p>
-        <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-          Reading from bookorders collection
-        </p>
+       
       </div>
     );
   }
@@ -506,42 +505,44 @@ const Dashboard = () => {
         )}
 
         {/* Recent Orders Summary Card */}
-        <div className="bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-750 rounded-xl shadow-lg p-6 cursor-pointer transition-all duration-200 border-2 border-transparent hover:border-green-500">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="bg-gradient-to-br from-cyan-500 to-cyan-600 p-4 rounded-xl shadow-lg">
-                <FaClipboardList className="text-white text-3xl" />
+      <Link href="/admin/bookorder/recent-orders">
+          <div className="bg-card  hover:bg-muted/50 rounded-xl shadow-lg my-6 p-6 cursor-pointer transition-all duration-200 border-2 border-border hover:border-green-500">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="bg-gradient-to-br from-cyan-500 to-cyan-600 p-4 rounded-xl shadow-lg">
+                  <FaClipboardList className="text-white text-3xl" />
+                </div>
+                <div>
+                  <h3 className="text-2xl font-bold text-foreground">
+                    View All Book Orders
+                  </h3>
+                  <p className="text-sm mt-1 text-muted-foreground">
+                    View all order activity and details
+                  </p>
+                </div>
               </div>
-              <div>
-                <h3 className="text-2xl font-bold text-gray-900 dark:text-white">
-                  View All Book Orders
-                </h3>
-                <p className="text-sm mt-1 text-gray-600 dark:text-gray-400">
-                  View all order activity and details
-                </p>
+              <div className="flex items-center gap-4">
+                <div className="text-right">
+                  <p className="text-4xl font-bold text-cyan-600">
+                    {recentOrdersCount}
+                    <p className="text-sm text-cyan-700">orders in 7 days</p>
+                  </p>
+                </div>
+                <FaArrowRight className="text-3xl text-muted-foreground group-hover:text-green-500 transition-colors" />
               </div>
             </div>
-            <div className="flex items-center gap-4">
-              <div className="text-right">
-                <p className="text-4xl font-bold text-cyan-600">
-                  {recentOrdersCount}
-                </p>
-                <p className="text-sm text-cyan-700">orders in 7 days</p>
+            <div className="mt-4 pt-4 border-t border-border">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">
+                  Click to view detailed order information
+                </span>
+                <span className="font-semibold text-cyan-600">
+                  View Details →
+                </span>
               </div>
-              <FaArrowRight className="text-3xl text-gray-400 group-hover:text-green-500 transition-colors" />
             </div>
           </div>
-          <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-gray-600 dark:text-gray-400">
-                Click to view detailed order information
-              </span>
-              <span className="font-semibold text-cyan-600">
-                View Details →
-              </span>
-            </div>
-          </div>
-        </div>
+        </Link>
 
         {/* Top and Bottom Performers */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

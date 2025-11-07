@@ -56,7 +56,7 @@ const Header = ({
   const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : new URLSearchParams();
   const currentBook = searchParams.get('book');
   const isDashboardPage = pathname === '/' || pathname === '/admin/bookorder';
-  const isRecentOrdersPage = pathname === '/bookorder/recent-orders';
+  const isRecentOrdersPage = pathname === '/admin/bookorder/recent-orders';
 
   // Theme detection
   useEffect(() => {
