@@ -622,7 +622,7 @@ const TableUI = ({
       )}
 
       {/* Table Container - Takes remaining space */}
-      <div className="flex-1 overflow-x-auto  w-full mx-auto px-4">
+      <div className="flex-1 overflow-x-auto  w-full mx-auto">
         <Table className="table-auto text-sm border-collapse border-b w-full">
           <Thead className="text-sm">
             <Tr>
