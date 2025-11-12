@@ -14,7 +14,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
   
   return (
     <SessionProvider>
-    <div className="flex overflow-hidden min-h-dvh">
+    <div className="flex over min-h-dvh">
       <Sidebar />
       <main className="flex-1">
         {/* <header className="sticky top-0 z-30 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
