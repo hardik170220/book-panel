@@ -322,7 +322,7 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
+    <div className="min-h-screen transition-colors duration-200">
       <Header/>
       <div className="p-4 md:p-6 space-y-6">
         {/* Key Metrics */}

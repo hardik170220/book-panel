@@ -43,7 +43,7 @@ export function Sidebar() {
   const router = useRouter()
   const { theme, setTheme } = useTheme()
   const [isLoggingOut, setIsLoggingOut] = useState(false)
-  const [isCollapsed, setIsCollapsed] = useState(false)
+  const [isCollapsed, setIsCollapsed] = useState(true)
   
   const { data: session, status } = useSession()
   const user = session?.user
