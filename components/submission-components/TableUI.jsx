@@ -550,7 +550,7 @@ const TableUI = ({
   const isMahabharatBook = bookName === "Mahabharat Book" ? true : false;
 
   return (
-    <div className={"flex flex-col min-h-screen py-4" + (isMahabharatBook ? ' mt-16' : '')}>
+    <div className={"flex flex-col h-[87vh]" + (isMahabharatBook ? ' mt-16' : '')}>
       {/* Fixed Search Header */}
       <div className="sticky top-0 z-30 bg-gray-800 text-white dark:bg-gray-200 dark:text-gray-800 py-2 px-4 md:px-8 w-full">
         <div className="flex flex-col md:flex-row justify-between items-center">
@@ -574,7 +574,7 @@ const TableUI = ({
       </div>
 
       {selectedRows.size > 0 && (
-        <div className="bg-blue-100 font-poppins dark:bg-blue-900 border border-blue-300 dark:border-blue-700 rounded p-3 m-4 flex items-center justify-between">
+        <div className="bg-blue-100 font-poppins dark:bg-blue-900 border border-blue-300 dark:border-blue-700 rounded p-1 px-3 m-4 flex items-center justify-between">
           <span className="font-semibold">
             {selectedRows.size} row(s) selected
           </span>
@@ -700,7 +700,7 @@ const TableUI = ({
       </div>
 
       {/* Fixed Pagination Footer */}
-      <div className="sticky bottom-0 bg-gray-200 dark:bg-gray-800 p-3 border-t border-gray-300 dark:border-gray-700 shadow-lg">
+      <div className="sticky bottom-0 my-2 bg-gray-200 dark:bg-gray-800  border-t border-gray-300 dark:border-gray-700 shadow-lg">
         <div className="max-w-[62rem] lg:max-w-6xl mx-auto">
           <div className="flex flex-col sm:flex-row justify-between items-center space-y-2 sm:space-y-0">
             <div className="flex items-center space-x-2">
