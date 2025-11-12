@@ -552,7 +552,7 @@ const TableUI = ({
   return (
     <div className={"flex flex-col min-h-screen py-4" + (isMahabharatBook ? ' mt-16' : '')}>
       {/* Fixed Search Header */}
-      <div className="sticky top-0 z-40 bg-gray-800 text-white dark:bg-gray-200 dark:text-gray-800 py-2 px-4 md:px-8 w-full">
+      <div className="sticky top-0 z-30 bg-gray-800 text-white dark:bg-gray-200 dark:text-gray-800 py-2 px-4 md:px-8 w-full">
         <div className="flex flex-col md:flex-row justify-between items-center">
           <h1 className="text-lg capitalize font-poppins font-bold mb-2 md:mb-0">
             {bookName} {" "}

@@ -459,7 +459,7 @@ const Header = ({
 
   return (
     <>
-      <header className="sticky top-0 left-0 right-0 z-50 font-poppins bg-card border-b border-border shadow-sm">
+      <header className="sticky top-0 left-0 right-0 z-40 font-poppins bg-card border-b border-border shadow-sm">
         <div className="px-4 sm:px-6">
           {/* Main Header Row */}
           <div className="flex items-center justify-end h-16 gap-4">
