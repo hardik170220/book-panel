@@ -98,8 +98,8 @@ const Header = ({
         const response = await fetch('https://getbookordercollections-fahifz22ha-uc.a.run.app/');
         const data = await response.json();
         
-        if (data.success && data.collections) {
-          const bookData = data.collections.map(collection => {
+        if (data.success && data.bookNames) {
+          const bookData = data.bookNames.map(collection => {
             const bookId = collection.replace(/-bookorder$/i, '');
             const bookName = bookId
               .split('-')
