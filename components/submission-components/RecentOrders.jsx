@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   FaShoppingBag,
   FaTruck,
@@ -8,7 +8,7 @@ import {
   FaChevronRight,
 } from "react-icons/fa";
 import { initializeApp } from "firebase/app";
-import { getFirestore, collection, getDocs, query, where } from "firebase/firestore";
+import { getFirestore, collection, getDocs, query, where, orderBy, limit } from "firebase/firestore";
 import Header from "./Header";
 
 // Firebase configuration
@@ -33,8 +33,8 @@ try {
   console.log("Firebase already initialized or error:", error);
 }
 
-// Loading Skeleton Component
-const TableSkeleton = ({ rowCount = 10 }) => {
+// Memoized Loading Skeleton Component
+const TableSkeleton = React.memo(({ rowCount = 10 }) => {
   return (
     <div className="overflow-x-auto custom-scrollbar">
       <table className="w-full text-sm border-collapse table-auto text-foreground">
@@ -83,11 +83,13 @@ const TableSkeleton = ({ rowCount = 10 }) => {
       </table>
     </div>
   );
-};
+});
 
-// Pagination Component
-const Pagination = ({ currentPage, totalPages, onPageChange }) => {
-  const getPageNumbers = () => {
+TableSkeleton.displayName = 'TableSkeleton';
+
+// Memoized Pagination Component
+const Pagination = React.memo(({ currentPage, totalPages, onPageChange }) => {
+  const getPageNumbers = useCallback(() => {
     const pages = [];
     const maxVisible = 5;
 
@@ -116,7 +118,7 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
     }
 
     return pages;
-  };
+  }, [currentPage, totalPages]);
 
   return (
     <div className="flex items-center justify-between mt-6 flex-wrap gap-4">
@@ -180,32 +182,23 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
       </select>
     </div>
   );
-};
+});
+
+Pagination.displayName = 'Pagination';
 
 const RecentOrdersPage = () => {
   const [recentOrders, setRecentOrders] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedFilter, setSelectedFilter] = useState("all");
-  const [discoveredCollections, setDiscoveredCollections] = useState([]);
   const [error, setError] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [ordersPerPage, setOrdersPerPage] = useState(15);
 
-  useEffect(() => {
-    loadCollectionsAndOrders();
-  }, []);
-
-  // Reset to page 1 when filter changes
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [selectedFilter]);
-
-  const formatDisplayName = (bookName) => {
-    // Handle calendar format
+  // Memoized format functions
+  const formatDisplayName = useCallback((bookName) => {
     if (bookName.includes("calendar")) {
       return bookName.replace("calendar", "Panchang ");
     }
-    // Handle other book names - convert camelCase or kebab-case to readable format
     return bookName
       .replace(/([A-Z])/g, ' $1')
       .replace(/[-_]/g, ' ')
@@ -213,77 +206,13 @@ const RecentOrdersPage = () => {
       .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
       .join(' ')
       .trim();
-  };
+  }, []);
 
-  const loadCollectionsAndOrders = async () => {
+  const formatDate = useCallback((timestamp) => {
     try {
-      setIsLoading(true);
-      setError(null);
-
-      if (!db) {
-        throw new Error("Firebase is not initialized");
-      }
-
-      // Fetch all orders from the single 'bookorders' collection
-      const ordersCollection = collection(db, "bookorders");
-      const snapshot = await getDocs(ordersCollection);
-
-      if (snapshot.size === 0) {
-        setRecentOrders([]);
-        setDiscoveredCollections([]);
-        return;
-      }
-
-      const allOrders = [];
-      const uniqueBooks = new Set();
-
-      snapshot.docs.forEach((doc) => {
-        const data = doc.data();
-        const bookName = data.bookName || "Unknown Book";
-        uniqueBooks.add(bookName);
-
-        allOrders.push({
-          id: doc.id,
-          bookName: formatDisplayName(bookName),
-          rawBookName: bookName,
-          name: data["नाम"] || data["उपनाम"] || "N/A",
-          phone: data["मोबाइल नंबर"] || "N/A",
-          address: data["એડ્રેસ/एड्रेस"] || "N/A",
-          city: data["शहर"] || "",
-          state: data["राज्य"] || "",
-          pincode: data["पिनकोड"] || "",
-          quantity: data["નકલ"] || 1,
-          parcelId: data.parcelId || "",
-          isShipped: data.parcelId && data.parcelId.trim() !== "",
-          timestamp: data.timestamp || data.migratedAt || data.createdAt || new Date().getTime(),
-        });
-      });
-
-      // Sort by timestamp (most recent first)
-      allOrders.sort((a, b) => {
-        const timeA =
-          typeof a.timestamp === "object" ? a.timestamp.toMillis() : a.timestamp;
-        const timeB =
-          typeof b.timestamp === "object" ? b.timestamp.toMillis() : b.timestamp;
-        return timeB - timeA;
-      });
-
-      setDiscoveredCollections(Array.from(uniqueBooks));
-      setRecentOrders(allOrders);
-    } catch (error) {
-      console.error("Error loading orders:", error);
-      setError(error.message || "Failed to load orders");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const formatDate = (timestamp) => {
-    try {
-      const date =
-        typeof timestamp === "object" && timestamp.toDate
-          ? timestamp.toDate()
-          : new Date(timestamp);
+      const date = typeof timestamp === "object" && timestamp.toDate
+        ? timestamp.toDate()
+        : new Date(timestamp);
 
       const now = new Date();
       const diffInMs = now - date;
@@ -304,30 +233,111 @@ const RecentOrdersPage = () => {
     } catch (e) {
       return "Unknown";
     }
-  };
+  }, []);
 
-  const filteredOrders = recentOrders.filter((order) => {
-    if (selectedFilter === "shipped") return order.isShipped;
-    if (selectedFilter === "pending") return !order.isShipped;
-    return true;
-  });
+  // Optimized load function - only loads 100 most recent orders
+  const loadRecentOrders = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
 
-  // Pagination calculations
-  const totalPages = Math.ceil(filteredOrders.length / ordersPerPage);
-  const indexOfLastOrder = currentPage * ordersPerPage;
-  const indexOfFirstOrder = indexOfLastOrder - ordersPerPage;
-  const currentOrders = filteredOrders.slice(indexOfFirstOrder, indexOfLastOrder);
+      if (!db) {
+        throw new Error("Firebase is not initialized");
+      }
 
-  const stats = {
+      // Only get the 100 most recent orders to minimize reads
+      const ordersCollection = collection(db, "bookorders");
+      const q = query(
+        ordersCollection,
+        orderBy("timestamp", "desc"),
+        limit(100) // Only load 100 most recent orders
+      );
+      
+      const snapshot = await getDocs(q);
+
+      if (snapshot.size === 0) {
+        setRecentOrders([]);
+        return;
+      }
+
+      const orders = snapshot.docs.map((doc) => {
+        const data = doc.data();
+        const bookName = data.bookName || "Unknown Book";
+
+        return {
+          id: doc.id,
+          bookName: formatDisplayName(bookName),
+          rawBookName: bookName,
+          name: data["नाम"] || data["उपनाम"] || "N/A",
+          phone: data["मोबाइल नंबर"] || "N/A",
+          address: data["એડ્રેસ/एड्रेस"] || "N/A",
+          city: data["शहर"] || "",
+          state: data["राज्य"] || "",
+          pincode: data["पिनकोड"] || "",
+          quantity: data["નકલ"] || 1,
+          parcelId: data.parcelId || "",
+          isShipped: !!(data.parcelId && data.parcelId.trim() !== ""),
+          timestamp: data.timestamp || data.migratedAt || data.createdAt || new Date().getTime(),
+        };
+      });
+
+      setRecentOrders(orders);
+    } catch (error) {
+      console.error("Error loading orders:", error);
+      setError(error.message || "Failed to load orders");
+    } finally {
+      setIsLoading(false);
+    }
+  }, [formatDisplayName]);
+
+  useEffect(() => {
+    loadRecentOrders();
+  }, [loadRecentOrders]);
+
+  // Reset to page 1 when filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedFilter]);
+
+  // Memoized filtered orders
+  const filteredOrders = React.useMemo(() => {
+    return recentOrders.filter((order) => {
+      if (selectedFilter === "shipped") return order.isShipped;
+      if (selectedFilter === "pending") return !order.isShipped;
+      return true;
+    });
+  }, [recentOrders, selectedFilter]);
+
+  // Memoized pagination calculations
+  const { currentOrders, totalPages } = React.useMemo(() => {
+    const totalPages = Math.ceil(filteredOrders.length / ordersPerPage);
+    const indexOfLastOrder = currentPage * ordersPerPage;
+    const indexOfFirstOrder = indexOfLastOrder - ordersPerPage;
+    const currentOrders = filteredOrders.slice(indexOfFirstOrder, indexOfLastOrder);
+    
+    return { currentOrders, totalPages };
+  }, [filteredOrders, currentPage, ordersPerPage]);
+
+  // Memoized stats
+  const stats = React.useMemo(() => ({
     total: recentOrders.length,
     shipped: recentOrders.filter((o) => o.isShipped).length,
     pending: recentOrders.filter((o) => !o.isShipped).length,
-  };
+  }), [recentOrders]);
 
-  const handlePageChange = (pageNumber) => {
+  const handlePageChange = useCallback((pageNumber) => {
     setCurrentPage(pageNumber);
     window.scrollTo({ top: 0, behavior: "smooth" });
-  };
+  }, []);
+
+  const handleFilterChange = useCallback((filter) => {
+    setSelectedFilter(filter);
+  }, []);
+
+  const handleOrdersPerPageChange = useCallback((value) => {
+    setOrdersPerPage(value);
+    setCurrentPage(1);
+  }, []);
 
   if (error) {
     return (
@@ -338,7 +348,7 @@ const RecentOrdersPage = () => {
           </h2>
           <p className="text-red-700 dark:text-red-300 mb-4">{error}</p>
           <button
-            onClick={loadCollectionsAndOrders}
+            onClick={loadRecentOrders}
             className="w-full bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors"
           >
             Retry Loading
@@ -357,17 +367,17 @@ const RecentOrdersPage = () => {
           {/* Filter Buttons */}
           <div className="flex flex-wrap gap-2 mb-6">
             <button
-              onClick={() => setSelectedFilter("all")}
+              onClick={() => handleFilterChange("all")}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                 selectedFilter === "all"
                   ? "bg-blue-600 text-white"
                   : "bg-muted text-foreground hover:bg-muted/80"
               }`}
             >
-              All Orders ({stats.total})
+              All Recent Orders ({stats.total})
             </button>
             <button
-              onClick={() => setSelectedFilter("shipped")}
+              onClick={() => handleFilterChange("shipped")}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                 selectedFilter === "shipped"
                   ? "bg-green-600 text-white"
@@ -378,7 +388,7 @@ const RecentOrdersPage = () => {
               Shipped ({stats.shipped})
             </button>
             <button
-              onClick={() => setSelectedFilter("pending")}
+              onClick={() => handleFilterChange("pending")}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                 selectedFilter === "pending"
                   ? "bg-yellow-600 text-white"
@@ -394,10 +404,7 @@ const RecentOrdersPage = () => {
               <span className="text-sm text-muted-foreground">Show:</span>
               <select
                 value={ordersPerPage}
-                onChange={(e) => {
-                  setOrdersPerPage(Number(e.target.value));
-                  setCurrentPage(1);
-                }}
+                onChange={(e) => handleOrdersPerPageChange(Number(e.target.value))}
                 className="px-3 py-2 rounded-lg text-sm bg-muted text-foreground border border-border"
               >
                 <option value={10}>10</option>
@@ -408,6 +415,8 @@ const RecentOrdersPage = () => {
               </select>
             </div>
           </div>
+
+         
 
           {/* Orders List or Skeleton */}
           {isLoading ? (
@@ -443,65 +452,11 @@ const RecentOrdersPage = () => {
                     </thead>
                     <tbody>
                       {currentOrders.map((order) => (
-                        <tr
-                          key={order.id}
-                          className="border-b border-border hover:bg-muted/50 transition-colors duration-150"
-                        >
-                          <td className="p-2 whitespace-nowrap text-green-700 dark:text-green-400 font-bold align-middle">
-                            {formatDate(order.timestamp)}
-                          </td>
-                          <td className="p-2 whitespace-nowrap">
-                            <span className="font-semibold text-blue-600 dark:text-blue-400">
-                              {order.bookName}
-                            </span>
-                          </td>
-                          <td className="p-2 whitespace-nowrap">
-                            <span>{order.name}</span>
-                          </td>
-                          <td className="p-2 whitespace-nowrap">
-                            <span>{order.phone}</span>
-                          </td>
-                          <td
-                            className="p-2 whitespace-normal align-middle"
-                            style={{ width: '200px', maxWidth: '200px' }}
-                          >
-                            <span className="break-words">{order.address}</span>
-                          </td>
-                          <td className="p-2 truncate align-middle">
-                            <span className="truncate">
-                              {order.city && ` ${order.city}`}
-                              <br />
-                              {order.pincode && `  ${order.pincode}`}
-                            </span>
-                          </td>
-                          <td className="p-2 truncate align-middle">
-                            <span className="truncate">{order.state && ` ${order.state}`}</span>
-                          </td>
-                          <td className="p-2 whitespace-nowrap align-middle">
-                            <span
-                              className={`px-2 py-1 rounded-full text-xs font-semibold inline-flex items-center gap-1 ${
-                                order.isShipped
-                                  ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
-                                  : "bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300"
-                              }`}
-                            >
-                              {order.isShipped ? <FaTruck /> : <FaClock />}
-                              {order.isShipped ? "Shipped" : "Pending"}
-                            </span>
-                          </td>
-                          <td className="p-2 whitespace-nowrap align-middle">
-                            {order.isShipped && order.parcelId ? (
-                              <code className="px-2 py-1 rounded text-xs bg-muted">
-                                {order.parcelId}
-                              </code>
-                            ) : (
-                              "-"
-                            )}
-                          </td>
-                          <td className="p-2 text-center align-middle font-bold text-blue-500">
-                            {order.quantity || 1}
-                          </td>
-                        </tr>
+                        <TableRow 
+                          key={order.id} 
+                          order={order} 
+                          formatDate={formatDate} 
+                        />
                       ))}
                     </tbody>
                   </table>
@@ -540,5 +495,69 @@ const RecentOrdersPage = () => {
     </div>
   );
 };
+
+// Memoized Table Row Component for better performance
+const TableRow = React.memo(({ order, formatDate }) => {
+  return (
+    <tr className="border-b border-border hover:bg-muted/50 transition-colors duration-150">
+      <td className="p-2 whitespace-nowrap text-green-700 dark:text-green-400 font-bold align-middle">
+        {formatDate(order.timestamp)}
+      </td>
+      <td className="p-2 whitespace-nowrap">
+        <span className="font-semibold text-blue-600 dark:text-blue-400">
+          {order.bookName}
+        </span>
+      </td>
+      <td className="p-2 whitespace-nowrap">
+        <span>{order.name}</span>
+      </td>
+      <td className="p-2 whitespace-nowrap">
+        <span>{order.phone}</span>
+      </td>
+      <td
+        className="p-2 whitespace-normal align-middle"
+        style={{ width: '200px', maxWidth: '200px' }}
+      >
+        <span className="break-words">{order.address}</span>
+      </td>
+      <td className="p-2 truncate align-middle">
+        <span className="truncate">
+          {order.city && ` ${order.city}`}
+          <br />
+          {order.pincode && `  ${order.pincode}`}
+        </span>
+      </td>
+      <td className="p-2 truncate align-middle">
+        <span className="truncate">{order.state && ` ${order.state}`}</span>
+      </td>
+      <td className="p-2 whitespace-nowrap align-middle">
+        <span
+          className={`px-2 py-1 rounded-full text-xs font-semibold inline-flex items-center gap-1 ${
+            order.isShipped
+              ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
+              : "bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300"
+          }`}
+        >
+          {order.isShipped ? <FaTruck /> : <FaClock />}
+          {order.isShipped ? "Shipped" : "Pending"}
+        </span>
+      </td>
+      <td className="p-2 whitespace-nowrap align-middle">
+        {order.isShipped && order.parcelId ? (
+          <code className="px-2 py-1 rounded text-xs bg-muted">
+            {order.parcelId}
+          </code>
+        ) : (
+          "-"
+        )}
+      </td>
+      <td className="p-2 text-center align-middle font-bold text-blue-500">
+        {order.quantity || 1}
+      </td>
+    </tr>
+  );
+});
+
+TableRow.displayName = 'TableRow';
 
 export default RecentOrdersPage;

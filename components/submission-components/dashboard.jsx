@@ -1,3 +1,4 @@
+
 "use client";
 import React, { useState, useEffect } from "react";
 import {
@@ -14,9 +15,7 @@ import {
   FaArrowDown,
   FaArrowRight,
   FaClipboardList,
-  FaUserCircle,
-  FaStar,
-  FaCrown,
+  FaSync,
 } from "react-icons/fa";
 import {
   BarChart,
@@ -39,7 +38,6 @@ import {
 
 // Firebase imports
 import { initializeApp } from "firebase/app";
-import Header from "../submission-components/Header";
 import { getFirestore, collection, getDocs, query, where } from "firebase/firestore";
 import Link from "next/link";
 
@@ -64,6 +62,10 @@ try {
 } catch (error) {
   console.log("Firebase already initialized or error:", error);
 }
+
+// Cache configuration
+const CACHE_KEY = "dashboard_data_cache";
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes in milliseconds
 
 // Helper function to format book name to display name
 const formatDisplayName = (bookName) => {
@@ -92,15 +94,62 @@ const Dashboard = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [recentOrdersCount, setRecentOrdersCount] = useState(0);
-  const [topCustomers, setTopCustomers] = useState([]);
-  const [allOrders, setAllOrders] = useState([]);
+  const [lastRefresh, setLastRefresh] = useState(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
     loadBookOrderData();
   }, []);
 
-  const loadBookOrderData = async () => {
+  // Check if cache is valid
+  const isCacheValid = (cacheData) => {
+    if (!cacheData || !cacheData.timestamp) return false;
+    const now = Date.now();
+    return (now - cacheData.timestamp) < CACHE_DURATION;
+  };
+
+  // Load data from cache
+  const loadFromCache = () => {
     try {
+      const cached = localStorage.getItem(CACHE_KEY);
+      if (cached) {
+        const cacheData = JSON.parse(cached);
+        if (isCacheValid(cacheData)) {
+          console.log("Loading from cache");
+          setBookData(cacheData.bookData);
+          setRecentOrdersCount(cacheData.recentOrdersCount);
+          setLastRefresh(new Date(cacheData.timestamp));
+          return true;
+        }
+      }
+    } catch (error) {
+      console.error("Error loading cache:", error);
+    }
+    return false;
+  };
+
+  // Save data to cache
+  const saveToCache = (data) => {
+    try {
+      const cacheData = {
+        ...data,
+        timestamp: Date.now()
+      };
+      localStorage.setItem(CACHE_KEY, JSON.stringify(cacheData));
+      setLastRefresh(new Date());
+    } catch (error) {
+      console.error("Error saving cache:", error);
+    }
+  };
+
+  const loadBookOrderData = async (forceRefresh = false) => {
+    try {
+      // Try to load from cache first
+      if (!forceRefresh && loadFromCache()) {
+        setIsLoading(false);
+        return;
+      }
+
       setIsLoading(true);
       setError(null);
 
@@ -116,20 +165,16 @@ const Dashboard = () => {
         throw new Error("No orders found in the bookorders collection.");
       }
 
-      console.log(`Found ${snapshot.size} total orders`);
+      console.log(`Fetched ${snapshot.size} total orders from Firebase`);
 
-      // Store all orders for later use
-      const orders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setAllOrders(orders);
-
-      // Group orders by bookName
+      // Group orders by bookName - single pass optimization
       const bookGroups = {};
-      const customerOrderMap = new Map();
       let totalRecentOrders = 0;
       const sevenDaysAgo = new Date();
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
-      orders.forEach((order) => {
+      snapshot.docs.forEach((doc) => {
+        const order = doc.data();
         const bookName = order.bookName || "Unknown";
         
         // Initialize book group if not exists
@@ -140,13 +185,11 @@ const Dashboard = () => {
             total: 0,
             shipped: 0,
             pending: 0,
-            orders: []
           };
         }
 
         // Count the order
         bookGroups[bookName].total++;
-        bookGroups[bookName].orders.push(order);
 
         // Check if shipped (has deliveredDate or parcelId)
         const isShipped = order.deliveredDate || (order.parcelId && order.parcelId.trim() !== "");
@@ -156,43 +199,14 @@ const Dashboard = () => {
           bookGroups[bookName].pending++;
         }
 
-        // Count recent orders
+        // Count recent orders (only count timestamp once per order)
         if (order.timestamp) {
           const orderDate = new Date(order.timestamp);
           if (orderDate >= sevenDaysAgo) {
             totalRecentOrders++;
           }
         }
-
-        // Track customer orders
-        const customerName = order["નામ"] || order["नाम"] || "";
-        const customerPhone = order["મોબાઇલ નંબર"] || order["मोबाइल नंबर"] || "";
-
-        if (customerName && customerName !== "N/A") {
-          const customerKey = customerPhone || customerName;
-
-          if (customerOrderMap.has(customerKey)) {
-            const existing = customerOrderMap.get(customerKey);
-            customerOrderMap.set(customerKey, {
-              name: customerName,
-              phone: customerPhone,
-              count: existing.count + 1,
-            });
-          } else {
-            customerOrderMap.set(customerKey, {
-              name: customerName,
-              phone: customerPhone,
-              count: 1,
-            });
-          }
-        }
       });
-
-      // Get top customers (those with orders >= number of books - 2)
-      const numBooks = Object.keys(bookGroups).length;
-      const customersArray = Array.from(customerOrderMap.values())
-        .filter((customer) => customer.count >= Math.max(3, numBooks - 2))
-        .sort((a, b) => b.count - a.count);
 
       // Convert bookGroups to the format expected by the rest of the component
       const loadedData = {};
@@ -207,12 +221,17 @@ const Dashboard = () => {
         };
       });
 
+      // Update state
       setBookData(loadedData);
       setRecentOrdersCount(totalRecentOrders);
-      setTopCustomers(customersArray);
+
+      // Save to cache
+      saveToCache({
+        bookData: loadedData,
+        recentOrdersCount: totalRecentOrders
+      });
       
-      console.log(`Successfully loaded ${Object.keys(loadedData).length} books`);
-      console.log("Top customers:", customersArray);
+      console.log(`Successfully processed ${Object.keys(loadedData).length} books`);
     } catch (error) {
       console.error("Error loading book data:", error);
       setError(
@@ -221,7 +240,14 @@ const Dashboard = () => {
       );
     } finally {
       setIsLoading(false);
+      setIsRefreshing(false);
     }
+  };
+
+  // Manual refresh function
+  const handleRefresh = () => {
+    setIsRefreshing(true);
+    loadBookOrderData(true);
   };
 
   // Calculate metrics
@@ -294,7 +320,7 @@ const Dashboard = () => {
           </h2>
           <p className="text-red-700 dark:text-red-300 mb-4">{error}</p>
           <button
-            onClick={loadBookOrderData}
+            onClick={() => loadBookOrderData(true)}
             className="w-full bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors"
           >
             Retry Loading
@@ -316,15 +342,33 @@ const Dashboard = () => {
         <p className="mt-4 text-lg text-gray-700 dark:text-gray-300">
           Loading order data...
         </p>
-       
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen transition-colors duration-200">
-      <Header/>
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
       <div className="p-4 md:p-6 space-y-6">
+        {/* Header with Refresh Button */}
+        <div className="flex justify-between items-center mb-4">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
+            {lastRefresh && (
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                Last updated: {lastRefresh.toLocaleTimeString()}
+              </p>
+            )}
+          </div>
+          <button
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white px-4 py-2 rounded-lg transition-colors"
+          >
+            <FaSync className={isRefreshing ? "animate-spin" : ""} />
+            {isRefreshing ? "Refreshing..." : "Refresh Data"}
+          </button>
+        </div>
+
         {/* Key Metrics */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
           <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-5 shadow-lg transform hover:scale-105 transition-transform duration-200">
@@ -426,97 +470,19 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* Top Customers Section */}
-        {topCustomers.length > 0 && (
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="bg-gradient-to-br from-orange-500 to-orange-600 p-3 rounded-xl shadow-lg">
-                <FaCrown className="text-white text-2xl" />
-              </div>
-              <div>
-                <h3 className="text-xl font-bold text-gray-900 dark:text-white">
-                  Our Frequent Readers
-                </h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Readers with frequent orders
-                </p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {topCustomers.map((customer, index) => (
-                <div
-                  key={index}
-                  className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 flex items-center justify-between hover:shadow-md transition-shadow"
-                >
-                  <div className="flex items-center gap-3">
-                    <div
-                      className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-white text-lg ${
-                        index === 0
-                          ? "bg-gradient-to-br from-yellow-400 to-yellow-600"
-                          : index === 1
-                          ? "bg-gradient-to-br from-gray-300 to-gray-500"
-                          : index === 2
-                          ? "bg-gradient-to-br from-orange-400 to-orange-600"
-                          : "bg-gray-400"
-                      }`}
-                    >
-                      {index === 0 ? (
-                        <FaCrown />
-                      ) : index === 1 ? (
-                        <FaStar />
-                      ) : index === 2 ? (
-                        <FaStar />
-                      ) : (
-                        index + 1
-                      )}
-                    </div>
-                    <div>
-                      <p className="font-semibold text-gray-900 dark:text-white">
-                        {customer.name}
-                      </p>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
-                        {customer.phone || "No phone"}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p
-                      className={`text-2xl font-bold ${
-                        index === 0
-                          ? "text-yellow-500"
-                          : index === 1
-                          ? "text-gray-400"
-                          : index === 2
-                          ? "text-orange-500"
-                          : "text-orange-600"
-                      }`}
-                    >
-                      {customer.count}
-                    </p>
-                    <p className="text-xs text-gray-600 dark:text-gray-400">
-                      orders
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
         {/* Recent Orders Summary Card */}
-      <Link href="/admin/bookorder/recent-orders">
-          <div className="bg-card  hover:bg-muted/50 rounded-xl shadow-lg my-6 p-6 cursor-pointer transition-all duration-200 border-2 border-border hover:border-green-500">
+        <Link href="/admin/bookorder/recent-orders">
+          <div className="bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-xl shadow-lg my-6 p-6 cursor-pointer transition-all duration-200 border-2 border-gray-200 dark:border-gray-700 hover:border-green-500">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <div className="bg-gradient-to-br from-cyan-500 to-cyan-600 p-4 rounded-xl shadow-lg">
                   <FaClipboardList className="text-white text-3xl" />
                 </div>
                 <div>
-                  <h3 className="text-2xl font-bold text-foreground">
+                  <h3 className="text-2xl font-bold text-gray-900 dark:text-white">
                     View All Book Orders
                   </h3>
-                  <p className="text-sm mt-1 text-muted-foreground">
+                  <p className="text-sm mt-1 text-gray-600 dark:text-gray-400">
                     View all order activity and details
                   </p>
                 </div>
@@ -525,15 +491,15 @@ const Dashboard = () => {
                 <div className="text-right">
                   <p className="text-4xl font-bold text-cyan-600">
                     {recentOrdersCount}
-                    <p className="text-sm text-cyan-700">orders in 7 days</p>
                   </p>
+                  <p className="text-sm text-cyan-700 dark:text-cyan-400">orders in 7 days</p>
                 </div>
-                <FaArrowRight className="text-3xl text-muted-foreground group-hover:text-green-500 transition-colors" />
+                <FaArrowRight className="text-3xl text-gray-400 dark:text-gray-500 hover:text-green-500 transition-colors" />
               </div>
             </div>
-            <div className="mt-4 pt-4 border-t border-border">
+            <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
               <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">
+                <span className="text-gray-600 dark:text-gray-400">
                   Click to view detailed order information
                 </span>
                 <span className="font-semibold text-cyan-600">
