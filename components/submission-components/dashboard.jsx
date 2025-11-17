@@ -40,6 +40,7 @@ import {
 import { initializeApp } from "firebase/app";
 import { getFirestore, collection, getDocs, query, where } from "firebase/firestore";
 import Link from "next/link";
+import Header from "./Header";
 
 // Firebase configuration
 const firebaseConfig = {
@@ -347,7 +348,8 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
+    <div className="min-h-screen  transition-colors duration-200">
+      <Header/>
       <div className="p-4 md:p-6 space-y-6">
         {/* Header with Refresh Button */}
         <div className="flex justify-between items-center mb-4">
