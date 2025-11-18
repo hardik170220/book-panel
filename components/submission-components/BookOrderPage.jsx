@@ -418,9 +418,10 @@ const DynamicBookOrderPage = () => {
     }, 0);
   };
 
-  const loadBookOrderData = async () => {
+const loadBookOrderData = async () => {
     try {
       setLoading(true);
+      setError(null);
 
       if (!bookName) {
         setError("No book name provided");
@@ -428,60 +429,40 @@ const DynamicBookOrderPage = () => {
         return;
       }
 
-      // Normalize the book name to match the bookName field in Firestore
-     let normalizedBookName;
-
-if (bookName === "aapnoGyanvaibhavForm") {
-  normalizedBookName = bookName; // keep original name
-} else {
-  normalizedBookName = bookName.toLowerCase().replace(/\s+/g, "-");
-}
+      // Normalize the book name
+      let normalizedBookName;
+      if (bookName === "aapnoGyanvaibhavForm") {
+        normalizedBookName = bookName;
+      } else {
+        normalizedBookName = bookName.toLowerCase().replace(/\s+/g, "-");
+      }
 
       console.log("Loading orders for book:", normalizedBookName);
 
-      // Query the unified bookorders collection filtering by bookName
-      const ordersCollection = collection(db, "bookorders");
-      const ordersQuery = query(
-        ordersCollection,
-        where("bookName", "==", normalizedBookName)
+      // Use Cloud Function instead of direct Firestore query
+      const response = await fetch(
+        `https://getbookorders-fahifz22ha-uc.a.run.app?bookName=${encodeURIComponent(normalizedBookName)}`
       );
-      
-      const orderSnapshot = await getDocs(ordersQuery);
 
-      if (!orderSnapshot.empty) {
-        const formattedData = orderSnapshot.docs.map((doc) => {
-          const item = doc.data();
-          const baseData = {
-            id: doc.id,
-            नाम: item["નામ"] || item["नाम"] || "N/A",
-            उपनाम: item["ઉપનામ"] || item["उपनाम"] || "",
-            "मोबाइल नंबर": item["મોબાઇલ નંબર"] || item["मोबाइल नंबर"] || "N/A",
-            शहर: item["શહેર"] || item["शहर"] || "N/A",
-            એડ્રેસ: item["એડ્રેસ/एड्रेस"] || item["એડ્રેસ"] || item["एड्रेस"] || "N/A",
-            पिनकोड: item["પિનકોડ"] || item["पिनकोड"] || "N/A",
-            राज्य: item["રાજ્ય"] || item["राज्य"] || "N/A",
-            parcelId: item.parcelId || "",
-            deliveryType: item.deliveryType || (item.parcelId ? "parcelId" : ""),
-            hasParcel: item.hasParcel || false,
-            deliveredDate: item.deliveredDate || null,
-            timestamp: item.timestamp ? new Date(item.timestamp) : new Date(),
-            bookName: item.bookName,
-          };
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+      }
 
-          if (bookConfig.hasBookQuantities) {
-            baseData.book_quantities = item.book_quantities || {};
-          } else if (bookConfig.hasCopies) {
-            baseData.નકલ = item["નકલ"] || item["नकल"] || 1;
-          }
+      const result = await response.json();
 
-          return baseData;
-        });
+      if (result.success && result.data) {
+        // Convert timestamp strings back to Date objects
+        const formattedData = result.data.map(item => ({
+          ...item,
+          timestamp: new Date(item.timestamp)
+        }));
 
         setData(formattedData);
         setTotalCopies(calculateTotalCopies(formattedData));
         console.log(`Loaded ${formattedData.length} orders for ${bookName}`);
       } else {
-        setError("No records found for this book");
+        setError(result.error || "No data received");
       }
     } catch (error) {
       console.error("Error loading data:", error);
@@ -490,7 +471,6 @@ if (bookName === "aapnoGyanvaibhavForm") {
       setLoading(false);
     }
   };
-
   const prepareDataWithActions = () => {
     return filteredData.map((item, index) => {
       const processedItem = {
