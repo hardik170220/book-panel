@@ -1,4 +1,3 @@
-
 "use client";
 import React, { useState, useEffect } from "react";
 import {
@@ -35,49 +34,7 @@ import {
   PolarRadiusAxis,
   Radar,
 } from "recharts";
-
-// Firebase imports
-import { initializeApp } from "firebase/app";
-import { getFirestore, collection, getDocs, query, where } from "firebase/firestore";
-import Link from "next/link";
 import Header from "./Header";
-
-// Firebase configuration
-const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
-  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
-};
-
-// Initialize Firebase
-let app;
-let db;
-
-try {
-  app = initializeApp(firebaseConfig);
-  db = getFirestore(app);
-} catch (error) {
-  console.log("Firebase already initialized or error:", error);
-}
-
-// Cache configuration
-const CACHE_KEY = "dashboard_data_cache";
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes in milliseconds
-
-// Helper function to format book name to display name
-const formatDisplayName = (bookName) => {
-  if (bookName.includes("calendar")) {
-    return bookName.replace("calendar", "Panchang ");
-  }
-  return bookName
-    .split("-")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ");
-};
 
 const COLORS = [
   "#10b981",
@@ -90,8 +47,20 @@ const COLORS = [
   "#14b8a6",
 ];
 
+// API endpoint
+const DASHBOARD_API = "https://us-central1-adhyatm-parivar-main.cloudfunctions.net/getDashboardData";
+const DASHBOARD_REFRESH_API = "https://updatedashboarddata-fahifz22ha-uc.a.run.app";
+
 const Dashboard = () => {
   const [bookData, setBookData] = useState({});
+  const [overallMetrics, setOverallMetrics] = useState({
+    totalOrders: 0,
+    totalShipped: 0,
+    totalPending: 0,
+    fulfillmentRate: 0,
+    avgOrdersPerBook: 0,
+    totalBooks: 0,
+  });
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [recentOrdersCount, setRecentOrdersCount] = useState(0);
@@ -99,145 +68,44 @@ const Dashboard = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
-    loadBookOrderData();
+    loadDashboardData();
   }, []);
 
-  // Check if cache is valid
-  const isCacheValid = (cacheData) => {
-    if (!cacheData || !cacheData.timestamp) return false;
-    const now = Date.now();
-    return (now - cacheData.timestamp) < CACHE_DURATION;
-  };
-
-  // Load data from cache
-  const loadFromCache = () => {
+  const loadDashboardData = async (forceRefresh = false) => {
     try {
-      const cached = localStorage.getItem(CACHE_KEY);
-      if (cached) {
-        const cacheData = JSON.parse(cached);
-        if (isCacheValid(cacheData)) {
-          console.log("Loading from cache");
-          setBookData(cacheData.bookData);
-          setRecentOrdersCount(cacheData.recentOrdersCount);
-          setLastRefresh(new Date(cacheData.timestamp));
-          return true;
-        }
+      if (forceRefresh) {
+        setIsRefreshing(true);
+        
+      } else {
+        setIsLoading(true);
       }
-    } catch (error) {
-      console.error("Error loading cache:", error);
-    }
-    return false;
-  };
-
-  // Save data to cache
-  const saveToCache = (data) => {
-    try {
-      const cacheData = {
-        ...data,
-        timestamp: Date.now()
-      };
-      localStorage.setItem(CACHE_KEY, JSON.stringify(cacheData));
-      setLastRefresh(new Date());
-    } catch (error) {
-      console.error("Error saving cache:", error);
-    }
-  };
-
-  const loadBookOrderData = async (forceRefresh = false) => {
-    try {
-      // Try to load from cache first
-      if (!forceRefresh && loadFromCache()) {
-        setIsLoading(false);
-        return;
-      }
-
-      setIsLoading(true);
       setError(null);
 
-      if (!db) {
-        throw new Error("Firebase is not initialized");
-      }
-
-      // Fetch all orders from the unified collection
-      const bookordersCollection = collection(db, "bookorders");
-      const snapshot = await getDocs(bookordersCollection);
-
-      if (snapshot.size === 0) {
-        throw new Error("No orders found in the bookorders collection.");
-      }
-
-      console.log(`Fetched ${snapshot.size} total orders from Firebase`);
-
-      // Group orders by bookName - single pass optimization
-      const bookGroups = {};
-      let totalRecentOrders = 0;
-      const sevenDaysAgo = new Date();
-      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-
-      snapshot.docs.forEach((doc) => {
-        const order = doc.data();
-        const bookName = order.bookName || "Unknown";
-        
-        // Initialize book group if not exists
-        if (!bookGroups[bookName]) {
-          bookGroups[bookName] = {
-            displayName: formatDisplayName(bookName),
-            bookName: bookName,
-            total: 0,
-            shipped: 0,
-            pending: 0,
-          };
-        }
-
-        // Count the order
-        bookGroups[bookName].total++;
-
-        // Check if shipped (has deliveredDate or parcelId)
-        const isShipped = order.deliveredDate || (order.parcelId && order.parcelId.trim() !== "");
-        if (isShipped) {
-          bookGroups[bookName].shipped++;
-        } else {
-          bookGroups[bookName].pending++;
-        }
-
-        // Count recent orders (only count timestamp once per order)
-        if (order.timestamp) {
-          const orderDate = new Date(order.timestamp);
-          if (orderDate >= sevenDaysAgo) {
-            totalRecentOrders++;
-          }
-        }
-      });
-
-      // Convert bookGroups to the format expected by the rest of the component
-      const loadedData = {};
-      Object.entries(bookGroups).forEach(([bookName, data]) => {
-        const id = bookName.replace(/[^a-zA-Z0-9]/g, "");
-        loadedData[id] = {
-          displayName: data.displayName,
-          collectionName: bookName,
-          total: data.total,
-          shipped: data.shipped,
-          pending: data.pending,
-        };
-      });
-
-      // Update state
-      setBookData(loadedData);
-      setRecentOrdersCount(totalRecentOrders);
-
-      // Save to cache
-      saveToCache({
-        bookData: loadedData,
-        recentOrdersCount: totalRecentOrders
-      });
+      const response = await fetch(DASHBOARD_API);
       
-      console.log(`Successfully processed ${Object.keys(loadedData).length} books`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+
+      if (!result.success) {
+        throw new Error(result.message || "Failed to fetch dashboard data");
+      }
+
+      const { bookData, recentOrdersCount, overallMetrics, updateTimestamp } = result.data;
+
+      // Update state with fetched data
+      setBookData(bookData);
+      setRecentOrdersCount(recentOrdersCount);
+      setOverallMetrics(overallMetrics);
+      setLastRefresh(new Date(updateTimestamp));
+
+      console.log("Dashboard data loaded successfully");
     } catch (error) {
-      console.error("Error loading book data:", error);
+      console.error("Error loading dashboard data:", error);
       setError(
-        error.message ||
-          "Failed to connect to database. Please check your internet connection."
+        error.message || "Failed to load dashboard data. Please try again."
       );
     } finally {
       setIsLoading(false);
@@ -246,30 +114,56 @@ const Dashboard = () => {
   };
 
   // Manual refresh function
-  const handleRefresh = () => {
-    setIsRefreshing(true);
-    loadBookOrderData(true);
-  };
+// Manual refresh function
+ const handleRefresh = async () => {
+  setIsRefreshing(true);
+  setError(null);
 
-  // Calculate metrics
-  const totalOrders = Object.values(bookData).reduce(
-    (sum, book) => sum + book.total,
-    0
-  );
-  const totalShipped = Object.values(bookData).reduce(
-    (sum, book) => sum + book.shipped,
-    0
-  );
-  const totalPending = Object.values(bookData).reduce(
-    (sum, book) => sum + book.pending,
-    0
-  );
-  const fulfillmentRate =
-    totalOrders > 0 ? Math.round((totalShipped / totalOrders) * 100) : 0;
-  const avgOrdersPerBook =
-    totalOrders > 0
-      ? Math.round(totalOrders / Object.keys(bookData).length)
-      : 0;
+  try {
+    console.log("Calling refresh API to update dashboard data...");
+    const refreshResponse = await fetch(DASHBOARD_REFRESH_API);
+
+    // 🔥 If API returns 429 (rate limit), show its JSON message
+    if (refreshResponse.status === 429) {
+      const rateLimitData = await refreshResponse.json();
+
+      setError(rateLimitData.error || "Rate limit active. Please try again later.");
+      setIsRefreshing(false);
+      return;
+    }
+
+    // Any non-200 status except 429 is a real error
+    if (!refreshResponse.ok) {
+      throw new Error(`Refresh API error! status: ${refreshResponse.status}`);
+    }
+
+    const refreshResult = await refreshResponse.json();
+    console.log("Refresh API response:", refreshResult);
+
+    console.log("Fetching updated dashboard data...");
+    await loadDashboardData(true);
+
+    console.log("Dashboard refreshed successfully!");
+    setIsRefreshing(false);
+  } catch (error) {
+    console.error("Error refreshing dashboard:", error);
+    setError(
+      error.message || "Failed to refresh dashboard data. Please try again."
+    );
+    setIsRefreshing(false);
+  }
+};
+
+
+  // Extract metrics
+  const {
+    totalOrders,
+    totalShipped,
+    totalPending,
+    fulfillmentRate,
+    avgOrdersPerBook,
+    totalBooks,
+  } = overallMetrics;
 
   // Prepare chart data
   const bookComparisonData = Object.entries(bookData)
@@ -321,7 +215,7 @@ const Dashboard = () => {
           </h2>
           <p className="text-red-700 dark:text-red-300 mb-4">{error}</p>
           <button
-            onClick={() => loadBookOrderData(true)}
+            onClick={() => loadDashboardData(true)}
             className="w-full bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors"
           >
             Retry Loading
@@ -341,7 +235,7 @@ const Dashboard = () => {
           </div>
         </div>
         <p className="mt-4 text-lg text-gray-700 dark:text-gray-300">
-          Loading order data...
+          Loading dashboard data...
         </p>
       </div>
     );
@@ -354,7 +248,9 @@ const Dashboard = () => {
         {/* Header with Refresh Button */}
         <div className="flex justify-between items-center mb-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+              Dashboard
+            </h1>
             {lastRefresh && (
               <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                 Last updated: {lastRefresh.toLocaleTimeString()}
@@ -466,51 +362,51 @@ const Dashboard = () => {
               </h3>
               <div className="flex items-center gap-1 text-pink-100 text-xs">
                 <FaBook className="text-pink-300" />
-                <span>{Object.keys(bookData).length} books</span>
+                <span>{totalBooks} books</span>
               </div>
             </div>
           </div>
         </div>
 
         {/* Recent Orders Summary Card */}
-        <Link href="/admin/bookorder/recent-orders">
-          <div className="bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-xl shadow-lg my-6 p-6 cursor-pointer transition-all duration-200 border-2 border-gray-200 dark:border-gray-700 hover:border-green-500">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="bg-gradient-to-br from-cyan-500 to-cyan-600 p-4 rounded-xl shadow-lg">
-                  <FaClipboardList className="text-white text-3xl" />
-                </div>
-                <div>
-                  <h3 className="text-2xl font-bold text-gray-900 dark:text-white">
-                    View All Book Orders
-                  </h3>
-                  <p className="text-sm mt-1 text-gray-600 dark:text-gray-400">
-                    View all order activity and details
-                  </p>
-                </div>
+        <div className="bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-xl shadow-lg my-6 p-6 cursor-pointer transition-all duration-200 border-2 border-gray-200 dark:border-gray-700 hover:border-green-500">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="bg-gradient-to-br from-cyan-500 to-cyan-600 p-4 rounded-xl shadow-lg">
+                <FaClipboardList className="text-white text-3xl" />
               </div>
-              <div className="flex items-center gap-4">
-                <div className="text-right">
-                  <p className="text-4xl font-bold text-cyan-600">
-                    {recentOrdersCount}
-                  </p>
-                  <p className="text-sm text-cyan-700 dark:text-cyan-400">orders in 7 days</p>
-                </div>
-                <FaArrowRight className="text-3xl text-gray-400 dark:text-gray-500 hover:text-green-500 transition-colors" />
+              <div>
+                <h3 className="text-2xl font-bold text-gray-900 dark:text-white">
+                  View All Book Orders
+                </h3>
+                <p className="text-sm mt-1 text-gray-600 dark:text-gray-400">
+                  View all order activity and details
+                </p>
               </div>
             </div>
-            <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-600 dark:text-gray-400">
-                  Click to view detailed order information
-                </span>
-                <span className="font-semibold text-cyan-600">
-                  View Details →
-                </span>
+            <div className="flex items-center gap-4">
+              <div className="text-right">
+                <p className="text-4xl font-bold text-cyan-600">
+                  {recentOrdersCount}
+                </p>
+                <p className="text-sm text-cyan-700 dark:text-cyan-400">
+                  orders in 7 days
+                </p>
               </div>
+              <FaArrowRight className="text-3xl text-gray-400 dark:text-gray-500 hover:text-green-500 transition-colors" />
             </div>
           </div>
-        </Link>
+          <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-gray-600 dark:text-gray-400">
+                Click to view detailed order information
+              </span>
+              <span className="font-semibold text-cyan-600">
+                View Details →
+              </span>
+            </div>
+          </div>
+        </div>
 
         {/* Top and Bottom Performers */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -724,7 +620,7 @@ const Dashboard = () => {
         {/* Detailed Book Cards - Scrollable Grid */}
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
           <h3 className="text-lg font-bold mb-6 text-gray-900 dark:text-white">
-            All Books Overview ({Object.keys(bookData).length})
+            All Books Overview ({totalBooks})
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
             {bookComparisonData.map((book, index) => (
@@ -744,19 +640,25 @@ const Dashboard = () => {
                 </div>
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between items-center">
-                    <span className="text-gray-600 dark:text-gray-400">Total:</span>
+                    <span className="text-gray-600 dark:text-gray-400">
+                      Total:
+                    </span>
                     <span className="font-bold text-gray-900 dark:text-white">
                       {book.total}
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-gray-600 dark:text-gray-400">Shipped:</span>
+                    <span className="text-gray-600 dark:text-gray-400">
+                      Shipped:
+                    </span>
                     <span className="font-bold text-green-500">
                       {book.shipped}
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-gray-600 dark:text-gray-400">Pending:</span>
+                    <span className="text-gray-600 dark:text-gray-400">
+                      Pending:
+                    </span>
                     <span className="font-bold text-yellow-500">
                       {book.pending}
                     </span>
