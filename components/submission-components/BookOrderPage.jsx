@@ -62,6 +62,7 @@ const DynamicBookOrderPage = () => {
   // Filter states
   const [filters, setFilters] = useState({
     deliveryType: "all",
+    deliveryStatus: "all", // New filter: all, delivered, notDelivered
     minCopies: 0,
     maxCopies: "",
     city: "",
@@ -143,6 +144,13 @@ const DynamicBookOrderPage = () => {
         if (filters.deliveryType !== "unassigned" && filters.deliveryType !== "parcelId" && item.deliveryType !== filters.deliveryType) return false;
       }
 
+      // New delivery status filter
+      if (filters.deliveryStatus !== "all") {
+        const hasDeliveredDate = item.deliveredDate && item.deliveredDate.trim() !== "";
+        if (filters.deliveryStatus === "delivered" && !hasDeliveredDate) return false;
+        if (filters.deliveryStatus === "notDelivered" && hasDeliveredDate) return false;
+      }
+
       const copies = bookConfig.hasBookQuantities 
         ? bookConfig.bookQuantityFields.reduce((total, field) => total + (parseInt(item.book_quantities?.[field.key] || 0, 10) || 0), 0)
         : parseInt(item["નકલ"] || item["नकल"] || 1, 10);
@@ -183,6 +191,7 @@ const DynamicBookOrderPage = () => {
   const resetFilters = () => {
     setFilters({
       deliveryType: "all",
+      deliveryStatus: "all", // Reset the new filter
       minCopies: 0,
       maxCopies: "",
       city: "",
@@ -198,6 +207,7 @@ const DynamicBookOrderPage = () => {
   const getActiveFilterCount = () => {
     let count = 0;
     if (filters.deliveryType !== "all") count++;
+    if (filters.deliveryStatus !== "all") count++; // Count the new filter
     if (filters.minCopies > 0) count++;
     if (filters.maxCopies) count++;
     if (filters.city) count++;
@@ -883,6 +893,22 @@ const DynamicBookOrderPage = () => {
                     </select>
                   </div>
 
+                  {/* New Delivery Status Filter */}
+                  <div>
+                    <label className="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">
+                      Delivery Status
+                    </label>
+                    <select
+                      value={filters.deliveryStatus}
+                      onChange={(e) => setFilters({...filters, deliveryStatus: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="all">All Status</option>
+                      <option value="delivered">Delivered</option>
+                      <option value="notDelivered">Not Delivered</option>
+                    </select>
+                  </div>
+
                   {/* Copies Range */}
                   <div>
                     <label className="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">
@@ -1332,7 +1358,6 @@ const DynamicBookOrderPage = () => {
 };
 
 export default DynamicBookOrderPage;
-
 
 // "use client";
 // import React, { useEffect, useState } from "react";
