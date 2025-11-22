@@ -17,7 +17,7 @@ const TableUI = ({
   onRowClick = null,
   onMarkDelivered = null,
 }) => {
-  // console.log("TableUI data:", data);
+  console.log("TableUI data:", data);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedRows, setSelectedRows] = useState(new Set());
   const [showDeliveryModal, setShowDeliveryModal] = useState(false);

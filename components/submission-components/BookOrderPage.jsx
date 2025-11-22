@@ -103,6 +103,7 @@ const DynamicBookOrderPage = () => {
   const getTableColumns = () => {
     const baseColumns = [
       { field: "timestamp", header: "Date & Time" },
+      { field: "registrationId", header: "Order Id" },
       { field: "नाम", header: "Name" },
       { field: "मोबाइल नंबर", header: "Mobile" },
       { field: "शहर", header: "City" },
@@ -125,7 +126,7 @@ const DynamicBookOrderPage = () => {
     baseColumns.push(
       { field: "parcelId", header: "Parcel ID" },
       { field: "deliveryType", header: "Delivery Type" },
-      { field: "deliveredDate", header: "Delivered Date" },
+      { field: "deliveredDate", header: "Dispatch Date" },
       { field: "actions", header: "Actions" }
     );
 
@@ -289,6 +290,7 @@ const DynamicBookOrderPage = () => {
       }
 
       const result = await response.json();
+      console.log(result,"result")
 
       if (result.success && result.data) {
         const formattedData = result.data.map(item => ({
@@ -307,6 +309,7 @@ const DynamicBookOrderPage = () => {
         setAllPages(pageCache);
 
         setData(formattedData);
+        // console.log(formattedData,"formattedData")
         setLastDocId(result.lastDocId);
         setLastTimestamp(result.lastTimestamp);
         setHasMore(result.hasMore);
@@ -647,6 +650,8 @@ const DynamicBookOrderPage = () => {
         नाम: item["नाम"] + " " + (item["उपनाम"] || ""),
         timestamp: item.timestamp,
         originalIndex: data.indexOf(item),
+        registrationId: item.registrationId || "N/A",
+
       };
 
       if (bookConfig.hasBookQuantities && item.book_quantities) {
@@ -904,8 +909,8 @@ const DynamicBookOrderPage = () => {
                       className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     >
                       <option value="all">All Status</option>
-                      <option value="delivered">Delivered</option>
-                      <option value="notDelivered">Not Delivered</option>
+                      <option value="delivered">Dispatch</option>
+                      <option value="notDelivered">Not Dispatch</option>
                     </select>
                   </div>
 
@@ -1159,7 +1164,7 @@ const DynamicBookOrderPage = () => {
           <div className="fixed inset-0 bg-black/50 text-sm flex font-anek items-center justify-center z-50 animate-fadeIn">
             <div className="bg-card rounded-lg p-6 w-full max-w-md animate-scaleIn border border-border">
               <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-bold text-foreground">Order Details</h2>
+                <h2 className="text-xl font-bold text-foreground"> {currentViewItem?.registrationId}</h2>
                 <button
                   onClick={() => setViewModalOpen(false)}
                   className="p-1 rounded-full hover:bg-muted"
