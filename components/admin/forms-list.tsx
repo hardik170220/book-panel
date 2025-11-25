@@ -405,7 +405,7 @@ function SortableTableRow({
           </div>
           <div>
             <div className="font-medium">{form.title}</div>
-            <div className="text-xs text-muted-foreground line-clamp-1">
+            <div className="text-xs truncate max-w-xs text-muted-foreground line-clamp-1">
               {form.description || "No description"}
             </div>
           </div>
