@@ -35,6 +35,7 @@ import {
   Radar,
 } from "recharts";
 import Header from "./Header";
+import Link from "next/link";
 
 const COLORS = [
   "#10b981",
@@ -169,6 +170,7 @@ const Dashboard = () => {
   const bookComparisonData = Object.entries(bookData)
     .map(([key, value]) => ({
       name: value.displayName,
+      collectionName: value.collectionName,
       total: value.total,
       shipped: value.shipped,
       pending: value.pending,
@@ -369,7 +371,8 @@ const Dashboard = () => {
         </div>
 
         {/* Recent Orders Summary Card */}
-        <div className="bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-xl shadow-lg my-6 p-6 cursor-pointer transition-all duration-200 border-2 border-gray-200 dark:border-gray-700 hover:border-green-500">
+        <Link href="/admin/bookorder/recent-orders">
+        <div href="/admin/bookorder/recent-orders" className="bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-xl shadow-lg my-6 p-6 cursor-pointer transition-all duration-200 border-2 border-gray-200 dark:border-gray-700 hover:border-green-500">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <div className="bg-gradient-to-br from-cyan-500 to-cyan-600 p-4 rounded-xl shadow-lg">
@@ -407,6 +410,7 @@ const Dashboard = () => {
             </div>
           </div>
         </div>
+        </Link>
 
         {/* Top and Bottom Performers */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -624,7 +628,8 @@ const Dashboard = () => {
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
             {bookComparisonData.map((book, index) => (
-              <div
+              <Link
+              href={`/admin/bookorder/view-submission?book=${book.collectionName}`}
                 key={index}
                 className="bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-lg p-4 transition-all duration-200 border-l-4 hover:shadow-md cursor-pointer group"
                 style={{ borderLeftColor: COLORS[index % COLORS.length] }}
@@ -678,7 +683,7 @@ const Dashboard = () => {
                     </p>
                   </div>
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
 

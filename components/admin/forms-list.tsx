@@ -56,26 +56,26 @@
 
 //   const handleDeleteConfirm = async () => {
 //     if (!formToDelete) return
-    
+
 //     setDeletingForm(true)
 //     try {
 //       // Call the API to delete the form
 //       const res = await fetch(`${API_URL}/${formToDelete}`, {
 //         method: 'DELETE',
 //       })
-      
+
 //       if (!res.ok) {
 //         throw new Error(`Failed to delete form: ${res.statusText}`)
 //       }
-      
+
 //       // Remove from local state
 //       setForms(forms.filter(form => form.id !== formToDelete))
-      
+
 //       // Call parent's onDelete callback
 //       onDelete(formToDelete)
-      
-//       toast({ 
-//         description: "Form deleted successfully." 
+
+//       toast({
+//         description: "Form deleted successfully."
 //       })
 //     } catch (err: any) {
 //       console.error("Error deleting form:", err)
@@ -112,14 +112,14 @@
 //       }
 
 //       // Update local state
-//       setForms(forms.map(f => 
+//       setForms(forms.map(f =>
 //         f.id === id ? { ...f, active: !f.active } : f
 //       ))
 
 //       onToggleActive(id)
-      
-//       toast({ 
-//         description: `Form ${form.active ? 'deactivated' : 'activated'} successfully.` 
+
+//       toast({
+//         description: `Form ${form.active ? 'deactivated' : 'activated'} successfully.`
 //       })
 //     } catch (err: any) {
 //       console.error("Error toggling form status:", err)
@@ -220,18 +220,18 @@
 //                             >
 //                               <Power className="h-4 w-4" />
 //                             </Button>
-//                             <Button 
-//                               size="icon" 
-//                               variant="ghost" 
-//                               title="Edit" 
+//                             <Button
+//                               size="icon"
+//                               variant="ghost"
+//                               title="Edit"
 //                               onClick={() => handleEditClick(f.id)}
 //                             >
 //                               <Pencil className="h-4 w-4" />
 //                             </Button>
-//                             <Button 
-//                               size="icon" 
-//                               variant="ghost" 
-//                               title="Delete" 
+//                             <Button
+//                               size="icon"
+//                               variant="ghost"
+//                               title="Delete"
 //                               onClick={() => handleDeleteClick(f.id)}
 //                             >
 //                               <Trash2 fill="red" color="red" className="h-4 w-4" />
@@ -257,20 +257,20 @@
 //           <DialogHeader>
 //             <DialogTitle>Delete Form</DialogTitle>
 //             <DialogDescription>
-//               Are you sure you want to delete the form "{formToDeleteDetails?.title}"? 
+//               Are you sure you want to delete the form "{formToDeleteDetails?.title}"?
 //               This action cannot be undone and will permanently remove the form and all its data.
 //             </DialogDescription>
 //           </DialogHeader>
 //           <DialogFooter>
-//             <Button 
-//               variant="outline" 
+//             <Button
+//               variant="outline"
 //               onClick={() => setDeleteDialogOpen(false)}
 //               disabled={deletingForm}
 //             >
 //               Cancel
 //             </Button>
-//             <Button 
-//               variant="destructive" 
+//             <Button
+//               variant="destructive"
 //               onClick={handleDeleteConfirm}
 //               disabled={deletingForm}
 //             >
@@ -283,17 +283,40 @@
 //   )
 // }
 
-"use client"
+"use client";
 
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import type { FormDefinition } from "./types"
-import { Trash2, Pencil, Eye, Power, GripVertical } from "lucide-react"
-import { useToast } from "@/hooks/use-toast"
-import { useEffect, useState } from "react"
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import type { FormDefinition } from "./types";
+import {
+  Trash2,
+  Pencil,
+  Eye,
+  Power,
+  GripVertical,
+  LinkIcon,
+} from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { useEffect, useState } from "react";
 import {
   DndContext,
   closestCenter,
@@ -302,27 +325,27 @@ import {
   useSensor,
   useSensors,
   DragEndEvent,
-} from '@dnd-kit/core'
+} from "@dnd-kit/core";
 import {
   arrayMove,
   SortableContext,
   sortableKeyboardCoordinates,
   useSortable,
   verticalListSortingStrategy,
-} from '@dnd-kit/sortable'
-import { CSS } from '@dnd-kit/utilities'
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 // Sortable Row Component
-function SortableTableRow({ 
-  form, 
-  onEdit, 
-  onDelete, 
-  onToggleActive 
-}: { 
-  form: FormDefinition
-  onEdit: (id: string) => void
-  onDelete: (id: string) => void
-  onToggleActive: (id: string) => void
+function SortableTableRow({
+  form,
+  onEdit,
+  onDelete,
+  onToggleActive,
+}: {
+  form: FormDefinition;
+  onEdit: (id: string) => void;
+  onDelete: (id: string) => void;
+  onToggleActive: (id: string) => void;
 }) {
   const {
     attributes,
@@ -331,20 +354,24 @@ function SortableTableRow({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: form.id })
+  } = useSortable({ id: form.id });
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.5 : 1,
-  }
+  };
 
-  const count = form.thumbnails?.length ?? 0
-  const first = count > 0 ? form.thumbnails![0] : undefined
-  const extra = count > 1 ? count - 1 : 0
+  const count = form.thumbnails?.length ?? 0;
+  const first = count > 0 ? form.thumbnails![0] : undefined;
+  const extra = count > 1 ? count - 1 : 0;
 
   return (
-    <TableRow ref={setNodeRef} style={style} className={isDragging ? 'relative z-50' : ''}>
+    <TableRow
+      ref={setNodeRef}
+      style={style}
+      className={isDragging ? "relative z-50" : ""}
+    >
       <TableCell className="w-12">
         <button
           className="cursor-grab active:cursor-grabbing p-1 hover:bg-accent rounded"
@@ -427,26 +454,35 @@ function SortableTableRow({
           >
             <Power className="h-4 w-4" />
           </Button>
-          <Button 
-            size="icon" 
-            variant="ghost" 
-            title="Edit" 
+          <Button
+            size="icon"
+            variant="ghost"
+            title="Edit"
             onClick={() => onEdit(form.id)}
           >
             <Pencil className="h-4 w-4" />
           </Button>
-          <Button 
-            size="icon" 
-            variant="ghost" 
-            title="Delete" 
+          <Button
+            size="icon"
+            variant="ghost"
+            title="Delete"
             onClick={() => onDelete(form.id)}
           >
             <Trash2 fill="red" color="red" className="h-4 w-4" />
           </Button>
+          <a
+            href={`https://adhyatmparivar.com/forms?form=${form.slug}`}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <Button size="icon" variant="ghost" title="Open Form Link">
+              <LinkIcon className="h-4 w-4" />
+            </Button>
+          </a>
         </div>
       </TableCell>
     </TableRow>
-  )
+  );
 }
 
 export function FormsList({
@@ -454,177 +490,191 @@ export function FormsList({
   onDelete,
   onToggleActive,
 }: {
-  onEdit: (id: string) => void
-  onDelete: (id: string) => void
-  onToggleActive: (id: string) => void
+  onEdit: (id: string) => void;
+  onDelete: (id: string) => void;
+  onToggleActive: (id: string) => void;
 }) {
-  const { toast } = useToast()
-  const [forms, setForms] = useState<FormDefinition[]>([])
-  const [loading, setLoading] = useState(false)
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
-  const [formToDelete, setFormToDelete] = useState<string | null>(null)
-  const [deletingForm, setDeletingForm] = useState(false)
+  const { toast } = useToast();
+  const [forms, setForms] = useState<FormDefinition[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [formToDelete, setFormToDelete] = useState<string | null>(null);
+  const [deletingForm, setDeletingForm] = useState(false);
 
-  const API_URL = "/api/forms"
+  const API_URL = "/api/forms";
 
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     })
-  )
+  );
 
   useEffect(() => {
     async function fetchForms() {
-      setLoading(true)
+      setLoading(true);
       try {
-        const res = await fetch(API_URL, { cache: "no-store" })
-        if (!res.ok) throw new Error(`Failed to fetch forms: ${res.statusText}`)
-        const data: FormDefinition[] = await res.json()
+        const res = await fetch(API_URL, { cache: "no-store" });
+        if (!res.ok)
+          throw new Error(`Failed to fetch forms: ${res.statusText}`);
+        const data: FormDefinition[] = await res.json();
         // Sort by order field if it exists, otherwise by created_at
         const sorted = data.sort((a, b) => {
           if (a.order !== undefined && b.order !== undefined) {
-            return a.order - b.order
+            return a.order - b.order;
           }
-          return new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-        })
-        setForms(sorted)
+          return (
+            new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+          );
+        });
+        setForms(sorted);
       } catch (err: any) {
-        console.error("Error fetching forms:", err)
+        console.error("Error fetching forms:", err);
         toast({
           description: "Failed to fetch forms",
-          variant: "destructive"
-        })
+          variant: "destructive",
+        });
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
     }
-    fetchForms()
-  }, [toast])
+    fetchForms();
+  }, [toast]);
 
   const handleDragEnd = async (event: DragEndEvent) => {
-    const { active, over } = event
+    const { active, over } = event;
 
     if (!over || active.id === over.id) {
-      return
+      return;
     }
 
-    const oldIndex = forms.findIndex((form) => form.id === active.id)
-    const newIndex = forms.findIndex((form) => form.id === over.id)
+    const oldIndex = forms.findIndex((form) => form.id === active.id);
+    const newIndex = forms.findIndex((form) => form.id === over.id);
 
-    const newForms = arrayMove(forms, oldIndex, newIndex)
-    
+    const newForms = arrayMove(forms, oldIndex, newIndex);
+
     // Update local state immediately for smooth UX
-    setForms(newForms)
+    setForms(newForms);
 
     // Update order on backend
     try {
       const updates = newForms.map((form, index) => ({
         id: form.id,
-        order: index
-      }))
+        order: index,
+      }));
 
       const res = await fetch(`${API_URL}/reorder`, {
-        method: 'PATCH',
+        method: "PATCH",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({ updates }),
-      })
+      });
 
       if (!res.ok) {
-        throw new Error(`Failed to update order: ${res.statusText}`)
+        throw new Error(`Failed to update order: ${res.statusText}`);
       }
 
       toast({
-        description: "Form order updated successfully."
-      })
+        description: "Form order updated successfully.",
+      });
     } catch (err: any) {
-      console.error("Error updating form order:", err)
+      console.error("Error updating form order:", err);
       toast({
         description: "Failed to update form order",
-        variant: "destructive"
-      })
+        variant: "destructive",
+      });
       // Revert on error
-      setForms(forms)
+      setForms(forms);
     }
-  }
+  };
 
   const handleDeleteClick = (id: string) => {
-    setFormToDelete(id)
-    setDeleteDialogOpen(true)
-  }
+    setFormToDelete(id);
+    setDeleteDialogOpen(true);
+  };
 
   const handleDeleteConfirm = async () => {
-    if (!formToDelete) return
-    
-    setDeletingForm(true)
+    if (!formToDelete) return;
+
+    setDeletingForm(true);
     try {
       const res = await fetch(`${API_URL}/${formToDelete}`, {
-        method: 'DELETE',
-      })
-      
+        method: "DELETE",
+      });
+
       if (!res.ok) {
-        throw new Error(`Failed to delete form: ${res.statusText}`)
+        throw new Error(`Failed to delete form: ${res.statusText}`);
       }
-      
-      setForms(forms.filter(form => form.id !== formToDelete))
-      onDelete(formToDelete)
-      
-      toast({ 
-        description: "Form deleted successfully." 
-      })
+
+      setForms(forms.filter((form) => form.id !== formToDelete));
+      onDelete(formToDelete);
+
+      toast({
+        description: "Form deleted successfully.",
+      });
     } catch (err: any) {
-      console.error("Error deleting form:", err)
+      console.error("Error deleting form:", err);
       toast({
         description: "Failed to delete form",
-        variant: "destructive"
-      })
+        variant: "destructive",
+      });
     } finally {
-      setDeletingForm(false)
-      setDeleteDialogOpen(false)
-      setFormToDelete(null)
+      setDeletingForm(false);
+      setDeleteDialogOpen(false);
+      setFormToDelete(null);
     }
-  }
+  };
 
   const handleToggleActive = async (id: string) => {
     try {
-      const form = forms.find(f => f.id === id)
-      if (!form) return
+      const form = forms.find((f) => f.id === id);
+      if (!form) return;
 
       const res = await fetch(`${API_URL}/${id}`, {
-        method: 'PATCH',
+        method: "PATCH",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({ active: !form.active }),
-      })
+      });
 
       if (!res.ok) {
-        throw new Error(`Failed to update form: ${res.statusText}`)
+        throw new Error(`Failed to update form: ${res.statusText}`);
       }
 
-      const updatedForm = await res.json()
+      const updatedForm = await res.json();
 
-      setForms(forms.map(f => 
-        f.id === id ? { ...f, active: !f.active, updated_by: updatedForm.updated_by, updated_at: updatedForm.updated_at } : f
-      ))
+      setForms(
+        forms.map((f) =>
+          f.id === id
+            ? {
+                ...f,
+                active: !f.active,
+                updated_by: updatedForm.updated_by,
+                updated_at: updatedForm.updated_at,
+              }
+            : f
+        )
+      );
 
-      onToggleActive(id)
-      
-      toast({ 
-        description: `Form ${form.active ? 'deactivated' : 'activated'} successfully.` 
-      })
+      onToggleActive(id);
+
+      toast({
+        description: `Form ${
+          form.active ? "deactivated" : "activated"
+        } successfully.`,
+      });
     } catch (err: any) {
-      console.error("Error toggling form status:", err)
+      console.error("Error toggling form status:", err);
       toast({
         description: "Failed to update form status",
-        variant: "destructive"
-      })
+        variant: "destructive",
+      });
     }
-  }
+  };
 
-  const formToDeleteDetails = forms.find(f => f.id === formToDelete)
+  const formToDeleteDetails = forms.find((f) => f.id === formToDelete);
 
   return (
     <>
@@ -632,7 +682,9 @@ export function FormsList({
         <CardContent>
           <div className="overflow-x-auto overflow-y-hidden font-anek">
             <Table className="overflow-hidden">
-              <TableCaption>Manage your generated forms. Drag to reorder.</TableCaption>
+              <TableCaption>
+                Manage your generated forms. Drag to reorder.
+              </TableCaption>
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-12"></TableHead>
@@ -646,13 +698,19 @@ export function FormsList({
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center text-muted-foreground">
+                    <TableCell
+                      colSpan={6}
+                      className="text-center text-muted-foreground"
+                    >
                       Loading forms...
                     </TableCell>
                   </TableRow>
                 ) : forms.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center text-muted-foreground">
+                    <TableCell
+                      colSpan={6}
+                      className="text-center text-muted-foreground"
+                    >
                       No forms yet. Create your first form from the sidebar.
                     </TableCell>
                   </TableRow>
@@ -663,7 +721,7 @@ export function FormsList({
                     onDragEnd={handleDragEnd}
                   >
                     <SortableContext
-                      items={forms.map(f => f.id)}
+                      items={forms.map((f) => f.id)}
                       strategy={verticalListSortingStrategy}
                     >
                       {forms.map((form) => (
@@ -690,20 +748,21 @@ export function FormsList({
           <DialogHeader>
             <DialogTitle>Delete Form</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete the form "{formToDeleteDetails?.title}"? 
-              This action cannot be undone and will permanently remove the form and all its data.
+              Are you sure you want to delete the form "
+              {formToDeleteDetails?.title}"? This action cannot be undone and
+              will permanently remove the form and all its data.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => setDeleteDialogOpen(false)}
               disabled={deletingForm}
             >
               Cancel
             </Button>
-            <Button 
-              variant="destructive" 
+            <Button
+              variant="destructive"
               onClick={handleDeleteConfirm}
               disabled={deletingForm}
             >
@@ -713,5 +772,5 @@ export function FormsList({
         </DialogContent>
       </Dialog>
     </>
-  )
+  );
 }
