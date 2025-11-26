@@ -1,24 +1,29 @@
-// shipping-label-generator.js
 import * as pdfMake from "pdfmake/build/pdfmake";
 
-export const generateShippingLabelsPDF = async (data,title) => {
+export const generateShippingLabelsPDF = async (data, title) => {
+  console.log(data, "data label");
   try {
-    // Load fonts
+    // Load fonts and logo
     const gujaratiFontPath = "/AnekGujarati-Regular.ttf";
     const hindiFontPath = "/Karma-Regular.ttf";
+    const logoPath = "/logo.png";
 
-    const [gujaratiFontResponse, hindiFontResponse] = await Promise.all([
+    const [gujaratiFontResponse, hindiFontResponse, logoResponse] = await Promise.all([
       fetch(gujaratiFontPath),
       fetch(hindiFontPath),
+      fetch(logoPath),
     ]);
 
-    const [gujaratiFontBuffer, hindiFontBuffer] = await Promise.all([
+    const [gujaratiFontBuffer, hindiFontBuffer, logoBuffer] = await Promise.all([
       gujaratiFontResponse.arrayBuffer(),
       hindiFontResponse.arrayBuffer(),
+      logoResponse.arrayBuffer(),
     ]);
 
     const gujaratiFontBase64 = arrayBufferToBase64(gujaratiFontBuffer);
     const hindiFontBase64 = arrayBufferToBase64(hindiFontBuffer);
+    const logoBase64 = arrayBufferToBase64(logoBuffer);
+    const logoDataUrl = `data:image/png;base64,${logoBase64}`;
 
     // Define fonts
     const fonts = {
@@ -42,11 +47,10 @@ export const generateShippingLabelsPDF = async (data,title) => {
       "Karma-Regular.ttf": hindiFontBase64,
     };
 
-   
     // Generate content for shipping labels
     const content = [];
-    const labelsPerPage = 9;
-    const labelHeight = 100;
+    const labelsPerPage = 7;
+    const labelHeight = 50;
 
     for (let i = 0; i < data.length; i += labelsPerPage) {
       const pageLabels = [];
@@ -57,60 +61,78 @@ export const generateShippingLabelsPDF = async (data,title) => {
         if (index >= data.length) break;
 
         const item = data[index];
-        
-        // Receiver information
+        const copies = item["નકલ"] || 1;
+        const registrationId = item.registrationId || `TM_${new Date(item.timestamp).getTime()}`;
+
+        // Format address: remove newlines and trim
+        const addressRaw = item["એડ્રેસ/एड्रेस"] || item["એડ્રેસ"] || "";
+        const address = addressRaw.replace(/\n/g, ', ').replace(/\s+/g, ' ').trim();
+
+        // Capitalize title
+        const formattedTitle = title ? title.charAt(0).toUpperCase() + title.slice(1) : "";
+
+        // Receiver information with vertical centering
         const receiverInfo = {
           stack: [
             {
-              text: detectScript(item["नाम"] + " " + item["उपनाम"]) === "devanagari" 
-                ? { text: `${item["नाम"]} ${item["उपनाम"]}`, font: "NotoSansDevanagari" }
-                : { text: `${item["नाम"]} ${item["उपनाम"]}`, font: "AnekGujarati" },
-              bold: true,
-              fontSize: 10
-            },
-            {
-              text: detectScript(item["એડ્રેસ/एड्रेस"]) === "devanagari"
-                ? { 
-                    text: item["એડ્રેસ/एड्रेस"],
-                      // .replace(/\n/g, ', ')
-                      // .replace(/,+/g, ', ')
-                      // .trim(), 
-                    font: "NotoSansDevanagari" 
-                  }
-                : { 
-                    text: item["એડ્રેસ/एड्रेस"],
-                      // .replace(/\n/g, ', ')
-                      // .replace(/,+/g, ', ')
-                      // .trim(),
-                    font: "AnekGujarati" 
-                  },
-              fontSize: 9
-            },
-            {
-              text: detectScript(item["शहर"]) === "devanagari"
-                ? { text: item["शहर"], font: "NotoSansDevanagari" }
-                : { text: item["शहर"], font: "AnekGujarati" },
-              fontSize: 8
-            },
-            {
-              text: `Gujarat - Pin: ${item["पिनकोड"]}, Mobile: ${item["मोबाइल नंबर"]}`,
-              fontSize: 8
-            },
-            { text: `TM_${new Date(item.timestamp).getTime()}`, fontSize: 8, alignment: 'left' }
+              stack: [
+                {
+                  text: detectScript(item["नाम"] + " " + item["उपनाम"]) === "devanagari"
+                    ? { text: `${item["नाम"]} ${item["उपनाम"]}`, font: "NotoSansDevanagari" }
+                    : { text: `${item["नाम"]} ${item["उपनाम"]}`, font: "AnekGujarati" },
+                  bold: true,
+                  fontSize: 10
+                },
+                {
+                  text: detectScript(address) === "devanagari"
+                    ? {
+                      text: address,
+                      font: "NotoSansDevanagari"
+                    }
+                    : {
+                      text: address,
+                      font: "AnekGujarati"
+                    },
+                  fontSize: 9,
+                  margin: [0, 2, 0, 2]
+                },
+                {
+                  text: detectScript(item["शहर"]) === "devanagari"
+                    ? { text: `${item["शहर"]} - Pin: ${item["पिनकोड"]}, Mo: ${item["मोबाइल नंबर"]}`, font: "NotoSansDevanagari" }
+                    : { text: `${item["शहर"]} - Pin: ${item["पिनकोड"]}, Mo: ${item["मोबाइल नंबर"]}`, font: "AnekGujarati" },
+                  fontSize: 9
+                },
+                { text: `${registrationId}`, fontSize: 12, bold: true, alignment: 'left', margin: [0, 2, 0, 0] }
+              ],
+              margin: [0, 20, 0, 0] // Top margin to center vertically
+            }
           ],
-          margin: [2, 2, 2, 2]
+          margin: [0, 0, 0, 0]
         };
 
-        // Sender information
+        // Sender information with Logo Watermark (Centered)
         const senderInfo = {
           stack: [
-            { text: "From:", fontSize: 10, bold: true },
-            { text: "Adhyatm Parivar, Adhyatm Bhavan, 3rd Floor", fontSize: 8, bold: true },
-            { text: "Anand Shravak Aradhana Bhavan, Shanti Vardhak Jain Sangh, Near Sanjeev Kumar Auditorium, Pal, Surat - 395009", fontSize: 8 },
-            { text: "Contact: 7676769600", fontSize: 8 },
-            { text: `udyanmantri-${item.displayCopies}`, fontSize: 8, alignment: 'right' }
+            // Logo centered and behind text (simulated with negative margin)
+            {
+              image: logoDataUrl,
+              width: 50,
+              opacity: 0.1,
+              alignment: 'center',
+              margin: [0, 0, 0, 0]
+            },
+            {
+              stack: [
+                { text: "From:", fontSize: 10, bold: true },
+                { text: "Adhyatm Parivar, Adhyatm Bhavan, 3rd Floor", fontSize: 8, bold: true },
+                { text: "Anand Shravak Aradhana Bhavan, Shanti Vardhak Jain Sangh, Near Sanjeev Kumar Auditorium, Pal, Surat - 395009", fontSize: 8 },
+                { text: "Contact: 7676769600", fontSize: 8 },
+                { text: `${formattedTitle} - ${copies}`, fontSize: 12, bold: true, alignment: 'right', margin: [0, 2, 0, 0] }
+              ],
+              margin: [0, -50, 0, 0] // Pull text up to overlap with image
+            }
           ],
-          margin: [2, 2, 2, 2]
+          margin: [0, 0, 0, 0]
         };
 
         tableBody.push([{
@@ -118,7 +140,7 @@ export const generateShippingLabelsPDF = async (data,title) => {
             {
               table: {
                 widths: ['60%', '40%'],
-                heights: labelHeight - 20,
+                heights: labelHeight - 10,
                 body: [[receiverInfo, senderInfo]]
               },
               layout: {
@@ -126,6 +148,10 @@ export const generateShippingLabelsPDF = async (data,title) => {
                 vLineWidth: () => 1,
                 hLineColor: '#000',
                 vLineColor: '#000',
+                paddingLeft: () => 2,
+                paddingRight: () => 2,
+                paddingTop: () => 2,
+                paddingBottom: () => 2,
               }
             }
           ],
@@ -142,7 +168,7 @@ export const generateShippingLabelsPDF = async (data,title) => {
       });
 
       content.push(pageLabels);
-      
+
       if (i + labelsPerPage < data.length) {
         content.push({ text: '', pageBreak: 'after' });
       }
@@ -151,7 +177,7 @@ export const generateShippingLabelsPDF = async (data,title) => {
     // Define the PDF document
     const docDefinition = {
       pageSize: 'A4',
-      pageMargins: [25,0],
+      pageMargins: [10, 5, 10, 5],
       content: content,
       defaultStyle: {
         font: "AnekGujarati"
@@ -179,5 +205,5 @@ const detectScript = (text) => {
   const devanagariPattern = /[\u0900-\u097F]/;
   const gujaratiPattern = /[\u0A80-\u0AFF]/;
   return devanagariPattern.test(text) ? "devanagari" :
-         gujaratiPattern.test(text) ? "gujarati" : "latin";
+    gujaratiPattern.test(text) ? "gujarati" : "latin";
 };
