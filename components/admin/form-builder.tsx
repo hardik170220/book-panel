@@ -30,7 +30,7 @@ type FormDraft = {
   thumbnails: string[];
   thumbnailFiles: File[];
   existingThumbnails: string[];
-  removedThumbnails: string[]; 
+  removedThumbnails: string[];
   fields: FieldKey[];
   active: boolean;
   show: boolean;
@@ -71,7 +71,7 @@ export function FormBuilder({
       link: editingForm?.link ?? "",
       tqmsg: editingForm?.tqmsg ?? "",
       tqmsg_description: editingForm?.tqmsg_description ?? "",
-      
+
       description: editingForm?.description ?? "",
       thumbnails: editingForm?.thumbnails ?? [],
       thumbnailFiles: [],
@@ -80,8 +80,8 @@ export function FormBuilder({
       fields: editingForm?.fields ?? getDefaultFields(),
       active: editingForm?.active ?? true,
       show: editingForm?.show ?? false,
-       activeFrom: formatDateForInput(editingForm?.activeFrom), 
-    activeTo: formatDateForInput(editingForm?.activeTo),
+      activeFrom: formatDateForInput(editingForm?.activeFrom),
+      activeTo: formatDateForInput(editingForm?.activeTo),
       no_of_copies: editingForm?.no_of_copies ?? 0,
     }),
     [editingForm]
@@ -108,11 +108,11 @@ export function FormBuilder({
   }
 
   function formatDateForInput(dateString?: string): string {
-  if (!dateString) return '';
-  const date = new Date(dateString);
-  if (isNaN(date.getTime())) return '';
-  return date.toISOString().split('T')[0];
-}
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return '';
+    return date.toISOString().split('T')[0];
+  }
 
 
   function onPickFiles(e: React.ChangeEvent<HTMLInputElement>) {
@@ -121,16 +121,16 @@ export function FormBuilder({
       // Validate file types and sizes
       const validFiles = files.filter(file => {
         if (!file.type.startsWith('image/')) {
-          toast({ 
-            description: `${file.name} is not a valid image file.`, 
-            variant: "destructive" 
+          toast({
+            description: `${file.name} is not a valid image file.`,
+            variant: "destructive"
           });
           return false;
         }
         if (file.size > 5 * 1024 * 1024) { // 5MB limit
-          toast({ 
-            description: `${file.name} is too large. Maximum file size is 5MB.`, 
-            variant: "destructive" 
+          toast({
+            description: `${file.name} is too large. Maximum file size is 5MB.`,
+            variant: "destructive"
           });
           return false;
         }
@@ -140,8 +140,8 @@ export function FormBuilder({
       if (validFiles.length > 0) {
         // Create object URLs for preview
         const urls = validFiles.map((f) => URL.createObjectURL(f));
-        setDraft((d) => ({ 
-          ...d, 
+        setDraft((d) => ({
+          ...d,
           thumbnails: [...d.thumbnails, ...urls],
           thumbnailFiles: [...d.thumbnailFiles, ...validFiles]
         }));
@@ -152,7 +152,7 @@ export function FormBuilder({
   function removeThumb(idx: number) {
     setDraft((d) => {
       const isExistingThumbnail = idx < d.existingThumbnails.length;
-      
+
       if (isExistingThumbnail) {
         // Mark existing thumbnail for removal
         const thumbnailToRemove = d.existingThumbnails[idx];
@@ -175,37 +175,37 @@ export function FormBuilder({
     });
   }
 
-//         function getFormLink(slug :any) {
-//   if (slug === "bhagwan-mahavir") {
-//     return "https://bhagwanmahavirform-fahifz22ha-uc.a.run.app";
-//   } else if (slug === "udayanmantri") {
-//     return "https://udayanmantriform-fahifz22ha-uc.a.run.app";
-//   } else if (slug === "mahabharat") {
-//     return "https://mahabharatform-fahifz22ha-uc.a.run.app";
-//   } else if (slug === "ravanni-bhitarma") {
-//     return "https://ravannibhitarmaform-fahifz22ha-uc.a.run.app";
-//   }else if (slug === "aapno-gyanvaibhav") {
-//     return "https://universalform-fahifz22ha-uc.a.run.app/aapnoGyanvaibhavForm";
-//   }
-//    else if (slug === "calendar-2082") {
-//     return "https://calendar2082form-fahifz22ha-uc.a.run.app";
-//   } else {
-//     return `https://universalform-fahifz22ha-uc.a.run.app/${slug}`;
-//   }
-// }
+  //         function getFormLink(slug :any) {
+  //   if (slug === "bhagwan-mahavir") {
+  //     return "https://bhagwanmahavirform-fahifz22ha-uc.a.run.app";
+  //   } else if (slug === "udayanmantri") {
+  //     return "https://udayanmantriform-fahifz22ha-uc.a.run.app";
+  //   } else if (slug === "mahabharat") {
+  //     return "https://mahabharatform-fahifz22ha-uc.a.run.app";
+  //   } else if (slug === "ravanni-bhitarma") {
+  //     return "https://ravannibhitarmaform-fahifz22ha-uc.a.run.app";
+  //   }else if (slug === "aapno-gyanvaibhav") {
+  //     return "https://universalform-fahifz22ha-uc.a.run.app/aapnoGyanvaibhavForm";
+  //   }
+  //    else if (slug === "calendar-2082") {
+  //     return "https://calendar2082form-fahifz22ha-uc.a.run.app";
+  //   } else {
+  //     return `https://universalform-fahifz22ha-uc.a.run.app/${slug}`;
+  //   }
+  // }
 
-function getFormLink(slug: any) {
-  // Special cases with fixed slug names
-  if (slug === "aapno-gyanvaibhav") {
-    return "https://universalform-fahifz22ha-uc.a.run.app?form=aapnoGyanvaibhavForm";
-  } else if (slug === "sanskrutam-saralam") {
-    return "https://universalform-fahifz22ha-uc.a.run.app?form=sanskrutam-saralam";
-  } 
-  
-  // For all other slugs, just remove hyphens
-  const formattedSlug = slug.replace(/-/g, '');
-  return `https://universalform-fahifz22ha-uc.a.run.app?form=${formattedSlug}`;
-}
+  function getFormLink(slug: any) {
+    // Special cases with fixed slug names
+    if (slug === "aapno-gyanvaibhav") {
+      return "https://universalform-fahifz22ha-uc.a.run.app?form=aapnoGyanvaibhavForm";
+    } else if (slug === "sanskrutam-saralam") {
+      return "https://universalform-fahifz22ha-uc.a.run.app?form=sanskrutam-saralam";
+    }
+
+    // For all other slugs, just remove hyphens
+    const formattedSlug = slug.replace(/-/g, '');
+    return `https://universalform-fahifz22ha-uc.a.run.app?form=${formattedSlug}&slug=${slug}`;
+  }
 
   function reset() {
     // Clean up object URLs
@@ -255,7 +255,7 @@ function getFormLink(slug: any) {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    
+
     if (!draft.title.trim()) {
       toast({ description: "Please add a title.", variant: "destructive" });
       return;
@@ -269,18 +269,18 @@ function getFormLink(slug: any) {
     // Validate slug format (optional but recommended)
     const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
     if (!slugPattern.test(draft.slug.trim())) {
-      toast({ 
-        description: "Slug must contain only lowercase letters, numbers, and hyphens.", 
-        variant: "destructive" 
+      toast({
+        description: "Slug must contain only lowercase letters, numbers, and hyphens.",
+        variant: "destructive"
       });
       return;
     }
 
     // Validate date range
     if (draft.activeFrom && draft.activeTo && draft.activeFrom > draft.activeTo) {
-      toast({ 
-        description: "Active From date must be before Active To date.", 
-        variant: "destructive" 
+      toast({
+        description: "Active From date must be before Active To date.",
+        variant: "destructive"
       });
       return;
     }
@@ -290,7 +290,7 @@ function getFormLink(slug: any) {
     try {
       // Create FormData for file upload
       const formData = new FormData();
-      
+
       // Add basic form fields
       formData.append('title', draft.title.trim());
       formData.append('slug', draft.slug.trim());
@@ -314,14 +314,14 @@ function getFormLink(slug: any) {
       if (editingForm) {
         // Send remaining existing thumbnails
         formData.append('existingThumbnails', JSON.stringify(draft.existingThumbnails));
-        
+
         // Send thumbnails to be removed
         if (draft.removedThumbnails.length > 0) {
           formData.append('removedThumbnails', JSON.stringify(draft.removedThumbnails));
         }
-        
+
         // Flag to indicate if we should replace all existing thumbnails
-        formData.append('removeExistingThumbnails', 
+        formData.append('removeExistingThumbnails',
           (draft.removedThumbnails.length > 0 || draft.thumbnailFiles.length > 0).toString()
         );
       }
@@ -359,11 +359,11 @@ function getFormLink(slug: any) {
       const processedForm = {
         ...responseData,
         fields: convertApiFieldsToFrontend(responseData),
-        thumbnails: Array.isArray(responseData.thumbnails) 
-          ? responseData.thumbnails 
-          : (typeof responseData.thumbnails === 'string' 
-              ? JSON.parse(responseData.thumbnails) 
-              : [])
+        thumbnails: Array.isArray(responseData.thumbnails)
+          ? responseData.thumbnails
+          : (typeof responseData.thumbnails === 'string'
+            ? JSON.parse(responseData.thumbnails)
+            : [])
       };
 
       if (editingForm) {
@@ -377,18 +377,18 @@ function getFormLink(slug: any) {
       }
     } catch (error: any) {
       console.error('Form submission error:', error);
-      
+
       let errorMessage = "An unexpected error occurred. Please try again.";
-      
+
       if (error.name === 'TypeError' && error.message.includes('fetch')) {
         errorMessage = "Network error. Please check your connection and try again.";
       } else if (error.message) {
         errorMessage = error.message;
       }
-      
-      toast({ 
-        description: errorMessage, 
-        variant: "destructive" 
+
+      toast({
+        description: errorMessage,
+        variant: "destructive"
       });
     } finally {
       setIsSubmitting(false);
@@ -398,7 +398,7 @@ function getFormLink(slug: any) {
   // Helper function to convert API response fields to frontend format
   function convertApiFieldsToFrontend(apiData: any): FieldKey[] {
     const fields: FieldKey[] = [];
-    
+
     if (apiData.show_mobile) fields.push('phone');
     if (apiData.show_name) fields.push('name');
     if (apiData.show_sname) fields.push('sname');
@@ -409,7 +409,7 @@ function getFormLink(slug: any) {
     if (apiData.show_copies) fields.push('copies');
     if (apiData.show_gender) fields.push('gender');
     if (apiData.show_age) fields.push('age');
-    
+
     return fields;
   }
 
@@ -439,7 +439,7 @@ function getFormLink(slug: any) {
               />
             </div>
 
-             <div className="grid gap-2">
+            <div className="grid gap-2">
               <Label htmlFor="desc">Form Description</Label>
               <Textarea
                 id="desc"
@@ -450,7 +450,7 @@ function getFormLink(slug: any) {
                 maxLength={1000}
               />
             </div>
-            
+
             <div className="grid gap-2">
               <Label htmlFor="slug">Slug *</Label>
               <Input
@@ -466,7 +466,7 @@ function getFormLink(slug: any) {
               </p>
             </div>
 
-             {/* <div className="grid gap-2">
+            {/* <div className="grid gap-2">
               <Label htmlFor="link">Link *</Label>
               <Input
                 id="link"
@@ -478,7 +478,7 @@ function getFormLink(slug: any) {
     
             </div> */}
 
-             <div className="grid gap-2">
+            <div className="grid gap-2">
               <Label htmlFor="tqmsg">Thank you message *</Label>
               <Input
                 id="tqmsg"
@@ -503,7 +503,7 @@ function getFormLink(slug: any) {
               />
             </div>
 
-           
+
 
             <div className="grid gap-2">
               <Label htmlFor="thumbs">Thumbnails (optional)</Label>
@@ -578,9 +578,9 @@ function getFormLink(slug: any) {
                             URL.revokeObjectURL(draft.thumbnails[urlIdx]);
                           }
                         });
-                        setDraft((d) => ({ 
-                          ...d, 
-                          thumbnails: [], 
+                        setDraft((d) => ({
+                          ...d,
+                          thumbnails: [],
                           thumbnailFiles: [],
                           existingThumbnails: [],
                           removedThumbnails: editingForm?.thumbnails ?? []
@@ -655,7 +655,7 @@ function getFormLink(slug: any) {
               />
             </div>
 
-             <div className="flex items-center justify-between rounded border p-3">
+            <div className="flex items-center justify-between rounded border p-3">
               <div className="space-y-0.5">
                 <Label htmlFor="show">Show on Event Page</Label>
                 <p className="text-sm text-muted-foreground">
@@ -695,10 +695,10 @@ function getFormLink(slug: any) {
                 Optional: Set a date range when the form should be active.
               </p>
             </div>
-            
+
             <div className="flex items-center justify-between gap-3">
-              <Button 
-                type="submit" 
+              <Button
+                type="submit"
                 className="min-w-32"
                 disabled={isSubmitting}
               >
@@ -721,9 +721,9 @@ function getFormLink(slug: any) {
                   Cancel
                 </Button>
               ) : (
-                <Button 
-                  type="button" 
-                  variant="outline" 
+                <Button
+                  type="button"
+                  variant="outline"
                   onClick={reset}
                   disabled={isSubmitting}
                 >

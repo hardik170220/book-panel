@@ -76,14 +76,14 @@ const Dashboard = () => {
     try {
       if (forceRefresh) {
         setIsRefreshing(true);
-        
+
       } else {
         setIsLoading(true);
       }
       setError(null);
 
       const response = await fetch(DASHBOARD_API);
-      
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -115,45 +115,45 @@ const Dashboard = () => {
   };
 
   // Manual refresh function
-// Manual refresh function
- const handleRefresh = async () => {
-  setIsRefreshing(true);
-  setError(null);
+  // Manual refresh function
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    setError(null);
 
-  try {
-    console.log("Calling refresh API to update dashboard data...");
-    const refreshResponse = await fetch(DASHBOARD_REFRESH_API);
+    try {
+      console.log("Calling refresh API to update dashboard data...");
+      const refreshResponse = await fetch(DASHBOARD_REFRESH_API);
 
-    // 🔥 If API returns 429 (rate limit), show its JSON message
-    if (refreshResponse.status === 429) {
-      const rateLimitData = await refreshResponse.json();
+      // 🔥 If API returns 429 (rate limit), show its JSON message
+      if (refreshResponse.status === 429) {
+        const rateLimitData = await refreshResponse.json();
 
-      setError(rateLimitData.error || "Rate limit active. Please try again later.");
+        setError(rateLimitData.error || "Rate limit active. Please try again later.");
+        setIsRefreshing(false);
+        return;
+      }
+
+      // Any non-200 status except 429 is a real error
+      if (!refreshResponse.ok) {
+        throw new Error(`Refresh API error! status: ${refreshResponse.status}`);
+      }
+
+      const refreshResult = await refreshResponse.json();
+      console.log("Refresh API response:", refreshResult);
+
+      console.log("Fetching updated dashboard data...");
+      await loadDashboardData(true);
+
+      console.log("Dashboard refreshed successfully!");
       setIsRefreshing(false);
-      return;
+    } catch (error) {
+      console.error("Error refreshing dashboard:", error);
+      setError(
+        error.message || "Failed to refresh dashboard data. Please try again."
+      );
+      setIsRefreshing(false);
     }
-
-    // Any non-200 status except 429 is a real error
-    if (!refreshResponse.ok) {
-      throw new Error(`Refresh API error! status: ${refreshResponse.status}`);
-    }
-
-    const refreshResult = await refreshResponse.json();
-    console.log("Refresh API response:", refreshResult);
-
-    console.log("Fetching updated dashboard data...");
-    await loadDashboardData(true);
-
-    console.log("Dashboard refreshed successfully!");
-    setIsRefreshing(false);
-  } catch (error) {
-    console.error("Error refreshing dashboard:", error);
-    setError(
-      error.message || "Failed to refresh dashboard data. Please try again."
-    );
-    setIsRefreshing(false);
-  }
-};
+  };
 
 
   // Extract metrics
@@ -245,7 +245,7 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen  transition-colors duration-200">
-      <Header/>
+      <Header />
       <div className="p-4 md:p-6 space-y-6">
         {/* Header with Refresh Button */}
         <div className="flex justify-between items-center mb-4">
@@ -370,46 +370,130 @@ const Dashboard = () => {
           </div>
         </div>
 
+        {/* Detailed Book Cards - Scrollable Grid */}
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+          <h3 className="text-lg font-bold mb-6 text-gray-900 dark:text-white">
+            All Books Overview ({totalBooks})
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
+            {bookComparisonData.map((book, index) => (
+              <Link
+                href={`/admin/bookorder/view-submission?book=${book.collectionName}`}
+                key={index}
+                className="bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-lg p-4 transition-all duration-200 border-l-4 hover:shadow-md cursor-pointer group"
+                style={{ borderLeftColor: COLORS[index % COLORS.length] }}
+              >
+                <div className="flex items-start justify-between mb-3">
+                  <h4 className="font-semibold text-sm text-gray-900 dark:text-white group-hover:scale-105 transition-transform">
+                    {book.name}
+                  </h4>
+                  <div
+                    className="w-2 h-2 rounded-full animate-pulse"
+                    style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                  />
+                </div>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600 dark:text-gray-400">
+                      Total:
+                    </span>
+                    <span className="font-bold text-gray-900 dark:text-white">
+                      {book.total}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600 dark:text-gray-400">
+                      Shipped:
+                    </span>
+                    <span className="font-bold text-green-500">
+                      {book.shipped}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600 dark:text-gray-400">
+                      Pending:
+                    </span>
+                    <span className="font-bold text-yellow-500">
+                      {book.pending}
+                    </span>
+                  </div>
+                  <div className="mt-3">
+                    <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2">
+                      <div
+                        className="h-2 rounded-full transition-all duration-500"
+                        style={{
+                          width: `${book.rate}%`,
+                          backgroundColor: COLORS[index % COLORS.length],
+                        }}
+                      ></div>
+                    </div>
+                    <p className="text-xs mt-1 text-right text-gray-600 dark:text-gray-400">
+                      {book.rate}% Complete
+                    </p>
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+
+          <style jsx>{`
+            .custom-scrollbar::-webkit-scrollbar {
+              width: 8px;
+            }
+            .custom-scrollbar::-webkit-scrollbar-track {
+              background: #f1f1f1;
+              border-radius: 4px;
+            }
+            .custom-scrollbar::-webkit-scrollbar-thumb {
+              background: #888;
+              border-radius: 4px;
+            }
+            .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+              background: #555;
+            }
+          `}</style>
+        </div>
+
         {/* Recent Orders Summary Card */}
         <Link href="/admin/bookorder/recent-orders">
-        <div href="/admin/bookorder/recent-orders" className="bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-xl shadow-lg my-6 p-6 cursor-pointer transition-all duration-200 border-2 border-gray-200 dark:border-gray-700 hover:border-green-500">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="bg-gradient-to-br from-cyan-500 to-cyan-600 p-4 rounded-xl shadow-lg">
-                <FaClipboardList className="text-white text-3xl" />
+          <div href="/admin/bookorder/recent-orders" className="bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-xl shadow-lg my-6 p-6 cursor-pointer transition-all duration-200 border-2 border-gray-200 dark:border-gray-700 hover:border-green-500">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="bg-gradient-to-br from-cyan-500 to-cyan-600 p-4 rounded-xl shadow-lg">
+                  <FaClipboardList className="text-white text-3xl" />
+                </div>
+                <div>
+                  <h3 className="text-2xl font-bold text-gray-900 dark:text-white">
+                    View All Book Orders
+                  </h3>
+                  <p className="text-sm mt-1 text-gray-600 dark:text-gray-400">
+                    View all order activity and details
+                  </p>
+                </div>
               </div>
-              <div>
-                <h3 className="text-2xl font-bold text-gray-900 dark:text-white">
-                  View All Book Orders
-                </h3>
-                <p className="text-sm mt-1 text-gray-600 dark:text-gray-400">
-                  View all order activity and details
-                </p>
+              <div className="flex items-center gap-4">
+                <div className="text-right">
+                  <p className="text-4xl font-bold text-cyan-600">
+                    {recentOrdersCount}
+                  </p>
+                  <p className="text-sm text-cyan-700 dark:text-cyan-400">
+                    orders in 7 days
+                  </p>
+                </div>
+                <FaArrowRight className="text-3xl text-gray-400 dark:text-gray-500 hover:text-green-500 transition-colors" />
               </div>
             </div>
-            <div className="flex items-center gap-4">
-              <div className="text-right">
-                <p className="text-4xl font-bold text-cyan-600">
-                  {recentOrdersCount}
-                </p>
-                <p className="text-sm text-cyan-700 dark:text-cyan-400">
-                  orders in 7 days
-                </p>
+            <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-gray-600 dark:text-gray-400">
+                  Click to view detailed order information
+                </span>
+                <span className="font-semibold text-cyan-600">
+                  View Details →
+                </span>
               </div>
-              <FaArrowRight className="text-3xl text-gray-400 dark:text-gray-500 hover:text-green-500 transition-colors" />
             </div>
           </div>
-          <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-gray-600 dark:text-gray-400">
-                Click to view detailed order information
-              </span>
-              <span className="font-semibold text-cyan-600">
-                View Details →
-              </span>
-            </div>
-          </div>
-        </div>
         </Link>
 
         {/* Top and Bottom Performers */}
@@ -621,89 +705,7 @@ const Dashboard = () => {
           </ResponsiveContainer>
         </div>
 
-        {/* Detailed Book Cards - Scrollable Grid */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
-          <h3 className="text-lg font-bold mb-6 text-gray-900 dark:text-white">
-            All Books Overview ({totalBooks})
-          </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
-            {bookComparisonData.map((book, index) => (
-              <Link
-              href={`/admin/bookorder/view-submission?book=${book.collectionName}`}
-                key={index}
-                className="bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-lg p-4 transition-all duration-200 border-l-4 hover:shadow-md cursor-pointer group"
-                style={{ borderLeftColor: COLORS[index % COLORS.length] }}
-              >
-                <div className="flex items-start justify-between mb-3">
-                  <h4 className="font-semibold text-sm text-gray-900 dark:text-white group-hover:scale-105 transition-transform">
-                    {book.name}
-                  </h4>
-                  <div
-                    className="w-2 h-2 rounded-full animate-pulse"
-                    style={{ backgroundColor: COLORS[index % COLORS.length] }}
-                  />
-                </div>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-600 dark:text-gray-400">
-                      Total:
-                    </span>
-                    <span className="font-bold text-gray-900 dark:text-white">
-                      {book.total}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-600 dark:text-gray-400">
-                      Shipped:
-                    </span>
-                    <span className="font-bold text-green-500">
-                      {book.shipped}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-600 dark:text-gray-400">
-                      Pending:
-                    </span>
-                    <span className="font-bold text-yellow-500">
-                      {book.pending}
-                    </span>
-                  </div>
-                  <div className="mt-3">
-                    <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2">
-                      <div
-                        className="h-2 rounded-full transition-all duration-500"
-                        style={{
-                          width: `${book.rate}%`,
-                          backgroundColor: COLORS[index % COLORS.length],
-                        }}
-                      ></div>
-                    </div>
-                    <p className="text-xs mt-1 text-right text-gray-600 dark:text-gray-400">
-                      {book.rate}% Complete
-                    </p>
-                  </div>
-                </div>
-              </Link>
-            ))}
-          </div>
 
-          <style jsx>{`
-            .custom-scrollbar::-webkit-scrollbar {
-              width: 8px;
-            }
-            .custom-scrollbar::-webkit-scrollbar-track {
-              background: #f1f1f1;
-              border-radius: 4px;
-            }
-            .custom-scrollbar::-webkit-scrollbar-thumb {
-              background: #888;
-              border-radius: 4px;
-            }
-            .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-              background: #555;
-            }
-          `}</style>
-        </div>
       </div>
     </div>
   );

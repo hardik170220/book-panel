@@ -92,15 +92,27 @@ const Header = ({
 
   // Fetch books from API
   useEffect(() => {
-    const fetchBooks = async () => {
+   const fetchBooks = async () => {
       try {
         setLoading(true);
-        const response = await fetch('https://getbookordercollections-fahifz22ha-uc.a.run.app/');
-        const data = await response.json();
         
-        if (data.success && data.bookNames) {
-          const bookData = data.bookNames.map(collection => {
-            const bookId = collection.replace(/-bookorder$/i, '');
+        // Fetch from the updated Cloud Function
+        const response = await fetch('https://getbookordercollections-fahifz22ha-uc.a.run.app/');
+        const result = await response.json();
+        
+        if (result.success && result.books) {
+          // Books already have formatted names from the database
+          const bookData = result.books.map(book => ({
+            id: book.formId || book.id, // Use formId for routing
+            name: book.name, // ✅ Already formatted (e.g., "Test Name")
+            slug: book.slug,
+            collection: book.collection || `${book.id}-bookorder`,
+          }));
+          
+          setBooks(bookData);
+        } else if (result.success && result.bookNames) {
+          // Fallback for old format (if needed during transition)
+          const bookData = result.bookNames.map(bookId => {
             const bookName = bookId
               .split('-')
               .map(word => word.charAt(0).toUpperCase() + word.slice(1))
@@ -109,7 +121,7 @@ const Header = ({
             return {
               id: bookId,
               name: bookName,
-              collection: collection,
+              collection: `${bookId}-bookorder`,
             };
           });
           
