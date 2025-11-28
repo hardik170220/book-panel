@@ -11,17 +11,17 @@ const sql = neon(process.env.DATABASE_URL);
 async function getCurrentUser(request) {
   try {
     const cookieHeader = request.headers.get('cookie');
-    
+
     const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http';
     const host = request.headers.get('host');
     const whoamiUrl = `${protocol}://${host}/api/whoami`;
-    
+
     const whoamiRes = await fetch(whoamiUrl, {
       headers: {
         cookie: cookieHeader || '',
       },
     });
-    
+
     if (whoamiRes.ok) {
       const userData = await whoamiRes.json();
       return userData;
@@ -74,10 +74,10 @@ export async function GET(request, { params }) {
       // Handle slug (public access)
       result = await sql`
         SELECT 
-          id, title, slug, link, tqmsg, tqmsg_description, description, thumbnails, no_of_copies,
+          id, title, slug, link, tqmsg, tqmsg_description, description, thumbnails, no_of_copies, stock,
           show_mobile, show_name, show_sname, show_pincode, 
           show_state, show_city, show_address, show_copies, 
-          show_gender, show_age, active, show, active_from, active_to,
+          show_gender, show_age, active, show, active_from, active_to, language,
           created_at
         FROM forms 
         WHERE slug = ${id} AND active = true
@@ -116,7 +116,9 @@ export async function GET(request, { params }) {
 
       // Convert field flags to field array for easier frontend handling
       const fields = [];
-      if (form.show_name) fields.push("name");
+      if (form.show_gender) fields.push("gender");
+      if (form.show_age) fields.push("age");
+      // if (form.show_language) fields.push("language");
       if (form.show_sname) fields.push("sname");
       if (form.show_mobile) fields.push("mobile");
       if (form.show_pincode) fields.push("pincode");
@@ -124,8 +126,8 @@ export async function GET(request, { params }) {
       if (form.show_city) fields.push("city");
       if (form.show_address) fields.push("address");
       if (form.show_copies) fields.push("copies");
-      if (form.show_gender) fields.push("gender");
-      if (form.show_age) fields.push("age");
+      if (form.show_name) fields.push("name");
+
 
       const responseData = {
         ...form,
@@ -141,6 +143,7 @@ export async function GET(request, { params }) {
           show_copies: form.show_copies,
           show_gender: form.show_gender,
           show_age: form.show_age,
+          // show_language: form.show_language,
         },
       };
 
@@ -162,21 +165,21 @@ export async function GET(request, { params }) {
 export async function PUT(request, { params }) {
   try {
     const { id } = await params;
-    
+
     // Get current user
     const currentUser = await getCurrentUser(request);
     const userId = currentUser?.id || null;
-    
+
     // Only allow numeric IDs for updates (admin only)
     if (!/^\d+$/.test(id)) {
       return Response.json({ message: 'Invalid form ID for update' }, { status: 400 });
     }
-    
+
     const formId = parseInt(id);
-    
+
     // Parse FormData
     const formData = await request.formData();
-    
+
     const title = formData.get('title');
     const slug = formData.get('slug');
     const link = formData.get('link');
@@ -188,7 +191,9 @@ export async function PUT(request, { params }) {
     const activeFrom = formData.get('activeFrom') || null;
     const activeTo = formData.get('activeTo') || null;
     const no_of_copies = parseInt(formData.get('no_of_copies')) || 0;
-    
+    const stock = parseInt(formData.get('stock')) || 0;
+    const language = formData.get('language') || 'english';
+
     // Field visibility flags
     const show_mobile = formData.get('show_mobile') === 'true';
     const show_name = formData.get('show_name') === 'true';
@@ -200,6 +205,7 @@ export async function PUT(request, { params }) {
     const show_copies = formData.get('show_copies') === 'true';
     const show_gender = formData.get('show_gender') === 'true';
     const show_age = formData.get('show_age') === 'true';
+    // const show_language = formData.get('show_language') === 'true';
 
     // Validation
     if (!title) {
@@ -226,21 +232,21 @@ export async function PUT(request, { params }) {
     let newThumbnailPaths = [];
     const thumbnailFiles = formData.getAll('thumbnails');
     const removeExistingThumbnails = formData.get('removeExistingThumbnails') === 'true';
-    
+
     // Get existing and removed thumbnails from form data
     const existingThumbnailsData = formData.get('existingThumbnails');
     const removedThumbnailsData = formData.get('removedThumbnails');
-    
+
     let keepThumbnails = [];
     let removeThumbnails = [];
-    
+
     try {
       keepThumbnails = existingThumbnailsData ? JSON.parse(existingThumbnailsData) : [];
       removeThumbnails = removedThumbnailsData ? JSON.parse(removedThumbnailsData) : [];
     } catch (error) {
       console.error('Error parsing thumbnail data:', error);
     }
-    
+
     // Upload new thumbnail files to Cloudinary
     if (thumbnailFiles && thumbnailFiles.length > 0) {
       for (const file of thumbnailFiles) {
@@ -265,7 +271,7 @@ export async function PUT(request, { params }) {
 
     // Determine final thumbnails
     let finalThumbnails = [];
-    
+
     if (removeExistingThumbnails && newThumbnailPaths.length > 0) {
       // Replace all existing with new ones
       const allExistingThumbnails = existingForm[0].thumbnails || [];
@@ -292,6 +298,7 @@ export async function PUT(request, { params }) {
         active_from = ${activeFrom}, 
         active_to = ${activeTo}, 
         no_of_copies = ${no_of_copies},
+        stock = ${stock},
         show_mobile = ${show_mobile}, 
         show_name = ${show_name}, 
         show_sname = ${show_sname}, 
@@ -304,7 +311,8 @@ export async function PUT(request, { params }) {
         show_age = ${show_age},
         thumbnails = ${JSON.stringify(finalThumbnails)}, 
         updated_by_id = ${userId},
-        updated_at = CURRENT_TIMESTAMP
+        updated_at = CURRENT_TIMESTAMP,
+        language = ${language}
       WHERE id = ${formId}
       RETURNING *
     `;
@@ -335,14 +343,14 @@ export async function PUT(request, { params }) {
 export async function DELETE(request, { params }) {
   try {
     const { id } = await params;
-    
+
     // Only allow numeric IDs for deletion (admin only)
     if (!/^\d+$/.test(id)) {
       return Response.json({ message: 'Invalid form ID for deletion' }, { status: 400 });
     }
-    
+
     const formId = parseInt(id);
-    
+
     // Get form data to delete associated files
     const existingForm = await sql`SELECT * FROM forms WHERE id = ${formId}`;
     if (existingForm.length === 0) {
@@ -359,7 +367,7 @@ export async function DELETE(request, { params }) {
 
     // Delete form from database
     const result = await sql`DELETE FROM forms WHERE id = ${formId} RETURNING *`;
-    
+
     if (result.length === 0) {
       return Response.json({ message: 'Form not found' }, { status: 404 });
     }
@@ -374,16 +382,16 @@ export async function DELETE(request, { params }) {
 export async function PATCH(request, { params }) {
   try {
     const { id } = await params;
-    
+
     // Get current user
     const currentUser = await getCurrentUser(request);
     const userId = currentUser?.id || null;
-    
+
     // Only allow numeric IDs for patches (admin only)
     if (!/^\d+$/.test(id)) {
       return Response.json({ message: 'Invalid form ID for update' }, { status: 400 });
     }
-    
+
     const formId = parseInt(id);
     const { active } = await request.json();
 

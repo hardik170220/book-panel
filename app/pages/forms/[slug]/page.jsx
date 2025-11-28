@@ -41,7 +41,7 @@ export default function DynamicFormPage() {
   const params = useParams();
   const router = useRouter();
   const { toast } = useToast();
-  
+
   const [form, setForm] = useState(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -60,7 +60,7 @@ export default function DynamicFormPage() {
       setLoading(true);
       // Use the unified [id] route which now handles both IDs and slugs
       const response = await fetch(`/api/forms/${slug}`);
-      
+
       if (!response.ok) {
         if (response.status === 404) {
           toast({
@@ -73,17 +73,17 @@ export default function DynamicFormPage() {
         }
         throw new Error('Failed to fetch form');
       }
-      
+
       const formData = await response.json();
       setForm(formData);
-      
+
       // Initialize form data with default values
       const initialData = {};
       formData.fields.forEach(field => {
         initialData[field] = field === 'copies' ? formData.no_of_copies || 0 : '';
       });
       setFormData(initialData);
-      
+
     } catch (error) {
       console.error('Error fetching form:', error);
       toast({
@@ -99,7 +99,7 @@ export default function DynamicFormPage() {
 
   const validateField = (fieldName, value) => {
     const newErrors = { ...errors };
-    
+
     switch (fieldName) {
       case 'name':
       case 'sname':
@@ -109,7 +109,7 @@ export default function DynamicFormPage() {
           delete newErrors[fieldName];
         }
         break;
-        
+
       case 'mobile':
         if (form.fieldConfig.show_mobile) {
           if (!value?.trim()) {
@@ -121,7 +121,7 @@ export default function DynamicFormPage() {
           }
         }
         break;
-        
+
       case 'email':
         if (value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
           newErrors.email = 'Please enter a valid email address';
@@ -129,7 +129,7 @@ export default function DynamicFormPage() {
           delete newErrors.email;
         }
         break;
-        
+
       case 'pincode':
         if (form.fieldConfig.show_pincode) {
           if (!value?.trim()) {
@@ -141,7 +141,7 @@ export default function DynamicFormPage() {
           }
         }
         break;
-        
+
       case 'age':
         if (value && (value < 1 || value > 120)) {
           newErrors.age = 'Please enter a valid age between 1 and 120';
@@ -149,7 +149,7 @@ export default function DynamicFormPage() {
           delete newErrors.age;
         }
         break;
-        
+
       case 'copies':
         if (value < 0) {
           newErrors.copies = 'Number of copies cannot be negative';
@@ -157,7 +157,7 @@ export default function DynamicFormPage() {
           delete newErrors.copies;
         }
         break;
-        
+
       default:
         if (form.fieldConfig[`show_${fieldName}`] && !value?.trim()) {
           newErrors[fieldName] = `${FIELD_LABELS[fieldName]} is required`;
@@ -165,7 +165,7 @@ export default function DynamicFormPage() {
           delete newErrors[fieldName];
         }
     }
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -177,27 +177,27 @@ export default function DynamicFormPage() {
 
   const validateForm = () => {
     const newErrors = {};
-    
+
     form.fields.forEach(field => {
       const value = formData[field];
       const fieldConfig = form.fieldConfig[`show_${field}`];
-      
+
       // Check required fields
       if (fieldConfig && ['name', 'sname', 'mobile', 'pincode'].includes(field) && !value?.trim()) {
         newErrors[field] = `${FIELD_LABELS[field]} is required`;
       }
-      
+
       // Validate specific field formats
       validateField(field, value);
     });
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!validateForm()) {
       toast({
         title: "Validation Error",
@@ -206,15 +206,15 @@ export default function DynamicFormPage() {
       });
       return;
     }
-    
+
     setSubmitting(true);
-    
+
     try {
       const submissionData = {
         form_id: form.id,
         ...formData
       };
-      
+
       const response = await fetch('/api/submissions', {
         method: 'POST',
         headers: {
@@ -222,19 +222,19 @@ export default function DynamicFormPage() {
         },
         body: JSON.stringify(submissionData),
       });
-      
+
       const result = await response.json();
-      
+
       if (!response.ok) {
         throw new Error(result.message || 'Failed to submit form');
       }
-      
+
       setSubmitted(true);
       toast({
         title: "Success!",
         description: "Your form has been submitted successfully.",
       });
-      
+
     } catch (error) {
       console.error('Form submission error:', error);
       toast({
@@ -291,7 +291,7 @@ export default function DynamicFormPage() {
                 Form Submitted Successfully!
               </h2>
               <p className="text-gray-600 mb-6">
-                Thank you for submitting <strong>{form.title}</strong>. 
+                Thank you for submitting <strong>{form.title}</strong>.
                 Your response has been recorded.
               </p>
               <div className="flex gap-4 justify-center">
@@ -327,7 +327,7 @@ export default function DynamicFormPage() {
           <ArrowLeft className="h-4 w-4" />
           Back to Forms
         </Link>
-        
+
         <div className="flex items-start gap-6">
           {/* Form Thumbnails */}
           {form.thumbnails && form.thumbnails.length > 0 && (
@@ -339,14 +339,14 @@ export default function DynamicFormPage() {
               />
             </div>
           )}
-          
+
           {/* Form Info */}
           <div className="flex-1">
             <h1 className="text-3xl font-bold text-gray-900 mb-2">{form.title}</h1>
             {form.description && (
               <p className="text-gray-600 mb-4">{form.description}</p>
             )}
-            
+
             {/* Form Metadata */}
             <div className="flex flex-wrap gap-4 text-sm text-gray-500">
               {form.active_to && (

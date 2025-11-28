@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Card,
   CardContent,
@@ -27,6 +28,7 @@ type FormDraft = {
   tqmsg_description: string;
   description: string;
   no_of_copies: number;
+  stock: number;
   thumbnails: string[];
   thumbnailFiles: File[];
   existingThumbnails: string[];
@@ -36,6 +38,7 @@ type FormDraft = {
   show: boolean;
   activeFrom?: string;
   activeTo?: string;
+  language: "hindi" | "english" | "gujarati";
 };
 
 // Function to get default fields (all except gender and age)
@@ -83,6 +86,8 @@ export function FormBuilder({
       activeFrom: formatDateForInput(editingForm?.activeFrom),
       activeTo: formatDateForInput(editingForm?.activeTo),
       no_of_copies: editingForm?.no_of_copies ?? 0,
+      stock: editingForm?.stock ?? 0,
+      language: editingForm?.language ?? "english",
     }),
     [editingForm]
   );
@@ -233,6 +238,8 @@ export function FormBuilder({
       activeFrom: "",
       activeTo: "",
       no_of_copies: 0,
+      stock: 0,
+      language: "english",
     });
     if (fileRef.current) fileRef.current.value = "";
   }
@@ -303,6 +310,8 @@ export function FormBuilder({
       formData.append('activeFrom', draft.activeFrom || '');
       formData.append('activeTo', draft.activeTo || '');
       formData.append('no_of_copies', draft.no_of_copies.toString());
+      formData.append('stock', draft.stock.toString());
+      formData.append('language', draft.language);
 
       // Add field visibility flags
       const fieldFlags = fieldsToApiFormat(draft.fields);
@@ -466,6 +475,28 @@ export function FormBuilder({
               </p>
             </div>
 
+            <div className="grid gap-2">
+              <Label>Language</Label>
+              <RadioGroup
+                value={draft.language}
+                onValueChange={(val: "hindi" | "english" | "gujarati") => setField("language", val)}
+                className="flex gap-4"
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="hindi" id="lang-hindi" />
+                  <Label htmlFor="lang-hindi">Hindi</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="english" id="lang-english" />
+                  <Label htmlFor="lang-english">English</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="gujarati" id="lang-gujarati" />
+                  <Label htmlFor="lang-gujarati">Gujarati</Label>
+                </div>
+              </RadioGroup>
+            </div>
+
             {/* <div className="grid gap-2">
               <Label htmlFor="link">Link *</Label>
               <Input
@@ -564,7 +595,8 @@ export function FormBuilder({
                       );
                     })}
                   </div>
-                )}
+                )
+                }
                 {draft.thumbnails.length > 0 ? (
                   <div>
                     <Button
@@ -638,6 +670,23 @@ export function FormBuilder({
                   setField("no_of_copies", Number(e.target.value))
                 }
                 placeholder="Enter number of copies"
+              />
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="stock">Stock</Label>
+              <p className="text-sm text-muted-foreground mb-2">
+                Enter the number of books present in stock.
+              </p>
+              <Input
+                id="stock"
+                type="number"
+                min={0}
+                value={draft.stock}
+                onChange={(e) =>
+                  setField("stock", Number(e.target.value))
+                }
+                placeholder="Enter stock quantity"
               />
             </div>
 

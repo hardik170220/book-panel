@@ -13,7 +13,7 @@ export const AVAILABLE_FIELDS: { key: FieldKey; label: string }[] = [
   { key: "gender", label: "Gender" },
   // { key: "comments", label: "Comments" },
   { key: "attachment", label: "Attachment" },
-    { key: "copies", label: "Copies" },
+  { key: "copies", label: "Copies" },
 
 ]
 
@@ -36,9 +36,11 @@ export type FormDefinition = {
   fields: FieldKey[]
   active: boolean
   show: boolean
-  no_of_copies : number | 0
+  no_of_copies: number | 0
+  stock: number | 0
+  language: "hindi" | "english" | "gujarati"
   created_at: string
-created_by_id?: number | null;
+  created_by_id?: number | null;
   updated_by_id?: number | null;
   created_by?: string; // User name
   updated_by?: string; // User name

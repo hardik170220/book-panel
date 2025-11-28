@@ -10,18 +10,18 @@ async function getCurrentUser(request) {
   try {
     // Get the authorization header or cookie
     const cookieHeader = request.headers.get('cookie');
-    
+
     // Make internal request to whoami endpoint
     const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http';
     const host = request.headers.get('host');
     const whoamiUrl = `${protocol}://${host}/api/whoami`;
-    
+
     const whoamiRes = await fetch(whoamiUrl, {
       headers: {
         cookie: cookieHeader || '',
       },
     });
-    
+
     if (whoamiRes.ok) {
       const userData = await whoamiRes.json();
       return userData;
@@ -89,6 +89,8 @@ export async function POST(request) {
     const activeFrom = formData.get("activeFrom");
     const activeTo = formData.get("activeTo");
     const no_of_copies = parseInt(formData.get("no_of_copies")) || 0;
+    const stock = parseInt(formData.get("stock")) || 0;
+    const language = formData.get("language") || "english";
 
     // Visibility flags
     const show_mobile = formData.get("show_mobile") === "true";
@@ -101,6 +103,7 @@ export async function POST(request) {
     const show_copies = formData.get("show_copies") === "true";
     const show_gender = formData.get("show_gender") === "true";
     const show_age = formData.get("show_age") === "true";
+    // const show_language = formData.get("show_language") === "true"; // Removed as per new requirement
 
     // Validation
     if (!title) {
@@ -147,7 +150,8 @@ export async function POST(request) {
         title, slug, link, tqmsg, description, active, show, active_from, active_to, no_of_copies,
         show_mobile, show_name, show_sname, show_pincode, show_state, 
         show_city, show_address, show_copies, show_gender, show_age, thumbnails,
-        "order", created_by_id, updated_by_id, created_at, updated_at
+        show_city, show_address, show_copies, show_gender, show_age, thumbnails,
+        "order", created_by_id, updated_by_id, created_at, updated_at, language, stock
       )
       VALUES (
         ${title}, ${slug}, ${link}, ${tqmsg}, ${description}, ${active}, ${show},
@@ -155,7 +159,8 @@ export async function POST(request) {
         ${show_mobile}, ${show_name}, ${show_sname}, ${show_pincode}, 
         ${show_state}, ${show_city}, ${show_address}, ${show_copies},
         ${show_gender}, ${show_age}, ${JSON.stringify(thumbnailPaths)},
-        ${nextOrder}, ${userId}, ${userId}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+        ${show_gender}, ${show_age}, ${JSON.stringify(thumbnailPaths)},
+        ${nextOrder}, ${userId}, ${userId}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, ${language}, ${stock}
       )
       RETURNING *
     `;

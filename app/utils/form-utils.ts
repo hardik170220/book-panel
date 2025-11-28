@@ -3,7 +3,7 @@ import { FieldKey, FormDefinition } from '@/components/admin/types';
 // Utility to convert database form to component format
 export function dbFormToComponentFormat(dbForm: any): FormDefinition {
   const fields: FieldKey[] = [];
-  
+
   // Map database boolean fields to FieldKey array
   if (dbForm.show_mobile) fields.push('phone');
   if (dbForm.show_name) fields.push('name');
@@ -30,8 +30,11 @@ export function dbFormToComponentFormat(dbForm: any): FormDefinition {
     activeFrom: dbForm.active_from || '',
     activeTo: dbForm.active_to || '',
     no_of_copies: dbForm.no_of_copies || 0,
+    stock: dbForm.stock || 0,
+    language: dbForm.language || 'english',
     thumbnails: dbForm.thumbnails || [],
     created_at: dbForm.created_at,
+    updated_at: dbForm.updated_at,
     submissions: dbForm.submissions || 0,
   };
 }
