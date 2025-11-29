@@ -209,7 +209,7 @@ const RecentOrdersPage = () => {
           rawBookName: bookName,
           name: data["नाम"] || data["उपनाम"] || "N/A",
           phone: data["मोबाइल नंबर"] || "N/A",
-          address: data["એડ્રેસ/एड्रेस"] || "N/A",
+          address: data["એડ્રેસ/एड्रेस"] || data["एड्रेस"] || "N/A",
           city: data["शहर"] || "",
           state: data["राज्य"] || "",
           pincode: data["पिनकोड"] || "",
