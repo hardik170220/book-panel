@@ -83,6 +83,7 @@ export async function POST(request) {
     const slug = formData.get("slug");
     const link = formData.get("link");
     const tqmsg = formData.get("tqmsg") || "";
+    const tqmsg_description = formData.get("tqmsg_description") || "";
     const description = formData.get("description") || "";
     const active = formData.get("active") === "true";
     const show = formData.get("show") === "true";
@@ -147,18 +148,16 @@ export async function POST(request) {
     // Insert form with created_by_id and updated_by_id
     const result = await sql`
       INSERT INTO forms (
-        title, slug, link, tqmsg, description, active, show, active_from, active_to, no_of_copies,
+        title, slug, link, tqmsg, tqmsg_description, description, active, show, active_from, active_to, no_of_copies,
         show_mobile, show_name, show_sname, show_pincode, show_state, 
-        show_city, show_address, show_copies, show_gender, show_age, thumbnails,
         show_city, show_address, show_copies, show_gender, show_age, thumbnails,
         "order", created_by_id, updated_by_id, created_at, updated_at, language, stock
       )
       VALUES (
-        ${title}, ${slug}, ${link}, ${tqmsg}, ${description}, ${active}, ${show},
+        ${title}, ${slug}, ${link}, ${tqmsg}, ${tqmsg_description}, ${description}, ${active}, ${show},
         ${activeFrom || null}, ${activeTo || null}, ${no_of_copies},
         ${show_mobile}, ${show_name}, ${show_sname}, ${show_pincode}, 
         ${show_state}, ${show_city}, ${show_address}, ${show_copies},
-        ${show_gender}, ${show_age}, ${JSON.stringify(thumbnailPaths)},
         ${show_gender}, ${show_age}, ${JSON.stringify(thumbnailPaths)},
         ${nextOrder}, ${userId}, ${userId}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, ${language}, ${stock}
       )

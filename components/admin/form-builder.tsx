@@ -41,6 +41,21 @@ type FormDraft = {
   language: "hindi" | "english" | "gujarati";
 };
 
+const DEFAULT_MESSAGES = {
+  gujarati: {
+    tqmsg: "આપનો પુસ્તક મેળવવા માટે રિકવેસ્ટ નંબર નીચે મુજબ છે.",
+    tqmsg_description: "એની નોંધ કરી લેશો."
+  },
+  hindi: {
+    tqmsg: "यह आपका किताब पाने के लिए रिक्वेस्ट नंबर है।",
+    tqmsg_description: "कृपया इसे नोट कर लें।"
+  },
+  english: {
+    tqmsg: "This is your request number to receive the book.",
+    tqmsg_description: "Please note this."
+  }
+};
+
 // Function to get default fields (all except gender and age)
 function getDefaultFields(): FieldKey[] {
   return AVAILABLE_FIELDS
@@ -72,8 +87,8 @@ export function FormBuilder({
       title: editingForm?.title ?? "",
       slug: editingForm?.slug ?? "",
       link: editingForm?.link ?? "",
-      tqmsg: editingForm?.tqmsg ?? "",
-      tqmsg_description: editingForm?.tqmsg_description ?? "",
+      tqmsg: editingForm?.tqmsg ?? DEFAULT_MESSAGES.english.tqmsg,
+      tqmsg_description: editingForm?.tqmsg_description ?? DEFAULT_MESSAGES.english.tqmsg_description,
 
       description: editingForm?.description ?? "",
       thumbnails: editingForm?.thumbnails ?? [],
@@ -226,8 +241,8 @@ export function FormBuilder({
       description: "",
       slug: "",
       link: getFormLink(draft.slug),
-      tqmsg: "",
-      tqmsg_description: "",
+      tqmsg: DEFAULT_MESSAGES.english.tqmsg,
+      tqmsg_description: DEFAULT_MESSAGES.english.tqmsg_description,
       thumbnails: [],
       thumbnailFiles: [],
       existingThumbnails: [],
@@ -479,7 +494,12 @@ export function FormBuilder({
               <Label>Language</Label>
               <RadioGroup
                 value={draft.language}
-                onValueChange={(val: "hindi" | "english" | "gujarati") => setField("language", val)}
+                onValueChange={(val: "hindi" | "english" | "gujarati") => {
+                  setField("language", val);
+                  // Update default messages based on language
+                  setField("tqmsg", DEFAULT_MESSAGES[val].tqmsg);
+                  setField("tqmsg_description", DEFAULT_MESSAGES[val].tqmsg_description);
+                }}
                 className="flex gap-4"
               >
                 <div className="flex items-center space-x-2">
