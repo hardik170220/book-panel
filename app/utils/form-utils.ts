@@ -32,6 +32,7 @@ export function dbFormToComponentFormat(dbForm: any): FormDefinition {
     no_of_copies: dbForm.no_of_copies || 0,
     stock: dbForm.stock || 0,
     language: dbForm.language || 'english',
+    copy_question: dbForm.copy_question,
     thumbnails: dbForm.thumbnails || [],
     created_at: dbForm.created_at,
     updated_at: dbForm.updated_at,

@@ -74,7 +74,7 @@ export async function GET(request, { params }) {
       // Handle slug (public access)
       result = await sql`
         SELECT 
-          id, title, slug, link, tqmsg, tqmsg_description, description, thumbnails, no_of_copies, stock,
+          id, title, slug, link, tqmsg, tqmsg_description, description, thumbnails, no_of_copies, stock, copy_question,
           show_mobile, show_name, show_sname, show_pincode, 
           show_state, show_city, show_address, show_copies, 
           show_gender, show_age, active, show, active_from, active_to, language,
@@ -193,6 +193,7 @@ export async function PUT(request, { params }) {
     const no_of_copies = parseInt(formData.get('no_of_copies')) || 0;
     const stock = parseInt(formData.get('stock')) || 0;
     const language = formData.get('language') || 'english';
+    const copy_question = formData.get('copy_question') || '';
 
     // Field visibility flags
     const show_mobile = formData.get('show_mobile') === 'true';
@@ -312,7 +313,8 @@ export async function PUT(request, { params }) {
         thumbnails = ${JSON.stringify(finalThumbnails)}, 
         updated_by_id = ${userId},
         updated_at = CURRENT_TIMESTAMP,
-        language = ${language}
+        language = ${language},
+        copy_question = ${copy_question}
       WHERE id = ${formId}
       RETURNING *
     `;

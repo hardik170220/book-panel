@@ -39,20 +39,24 @@ type FormDraft = {
   activeFrom?: string;
   activeTo?: string;
   language: "hindi" | "english" | "gujarati";
+  copy_question: string;
 };
 
 const DEFAULT_MESSAGES = {
   gujarati: {
     tqmsg: "આપનો પુસ્તક મેળવવા માટે રિકવેસ્ટ નંબર નીચે મુજબ છે.",
-    tqmsg_description: "એની નોંધ કરી લેશો."
+    tqmsg_description: "એની નોંધ કરી લેશો.",
+    copy_question: "આપને આ પુસ્તકની કેટલી નકલની આવશ્યકતા છે?"
   },
   hindi: {
     tqmsg: "यह आपका किताब पाने के लिए रिक्वेस्ट नंबर है।",
-    tqmsg_description: "कृपया इसे नोट कर लें।"
+    tqmsg_description: "कृपया इसे नोट कर लें।",
+    copy_question: "आपको इस पुस्तक की कितनी प्रतियों की आवश्यकता है?"
   },
   english: {
     tqmsg: "This is your request number to receive the book.",
-    tqmsg_description: "Please note this."
+    tqmsg_description: "Please note this.",
+    copy_question: "How many copies of this book do you need?"
   }
 };
 
@@ -103,6 +107,7 @@ export function FormBuilder({
       no_of_copies: editingForm?.no_of_copies ?? 0,
       stock: editingForm?.stock ?? 0,
       language: editingForm?.language ?? "english",
+      copy_question: editingForm?.copy_question ?? DEFAULT_MESSAGES[editingForm?.language ?? "english"].copy_question,
     }),
     [editingForm]
   );
@@ -255,6 +260,7 @@ export function FormBuilder({
       no_of_copies: 0,
       stock: 0,
       language: "english",
+      copy_question: DEFAULT_MESSAGES.english.copy_question,
     });
     if (fileRef.current) fileRef.current.value = "";
   }
@@ -327,6 +333,7 @@ export function FormBuilder({
       formData.append('no_of_copies', draft.no_of_copies.toString());
       formData.append('stock', draft.stock.toString());
       formData.append('language', draft.language);
+      formData.append('copy_question', draft.copy_question.trim());
 
       // Add field visibility flags
       const fieldFlags = fieldsToApiFormat(draft.fields);
@@ -499,6 +506,7 @@ export function FormBuilder({
                   // Update default messages based on language
                   setField("tqmsg", DEFAULT_MESSAGES[val].tqmsg);
                   setField("tqmsg_description", DEFAULT_MESSAGES[val].tqmsg_description);
+                  setField("copy_question", DEFAULT_MESSAGES[val].copy_question);
                 }}
                 className="flex gap-4"
               >
@@ -690,6 +698,16 @@ export function FormBuilder({
                   setField("no_of_copies", Number(e.target.value))
                 }
                 placeholder="Enter number of copies"
+              />
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="copy_question">Question for Copy Field</Label>
+              <Input
+                id="copy_question"
+                placeholder="Enter the question for copy field"
+                value={draft.copy_question}
+                onChange={(e) => setField("copy_question", e.target.value)}
               />
             </div>
 

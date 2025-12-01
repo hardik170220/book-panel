@@ -39,6 +39,7 @@ export type FormDefinition = {
   no_of_copies: number | 0
   stock: number | 0
   language: "hindi" | "english" | "gujarati"
+  copy_question?: string
   created_at: string
   created_by_id?: number | null;
   updated_by_id?: number | null;

@@ -92,6 +92,7 @@ export async function POST(request) {
     const no_of_copies = parseInt(formData.get("no_of_copies")) || 0;
     const stock = parseInt(formData.get("stock")) || 0;
     const language = formData.get("language") || "english";
+    const copy_question = formData.get("copy_question") || "";
 
     // Visibility flags
     const show_mobile = formData.get("show_mobile") === "true";
@@ -151,7 +152,7 @@ export async function POST(request) {
         title, slug, link, tqmsg, tqmsg_description, description, active, show, active_from, active_to, no_of_copies,
         show_mobile, show_name, show_sname, show_pincode, show_state, 
         show_city, show_address, show_copies, show_gender, show_age, thumbnails,
-        "order", created_by_id, updated_by_id, created_at, updated_at, language, stock
+        "order", created_by_id, updated_by_id, created_at, updated_at, language, stock, copy_question
       )
       VALUES (
         ${title}, ${slug}, ${link}, ${tqmsg}, ${tqmsg_description}, ${description}, ${active}, ${show},
@@ -159,7 +160,7 @@ export async function POST(request) {
         ${show_mobile}, ${show_name}, ${show_sname}, ${show_pincode}, 
         ${show_state}, ${show_city}, ${show_address}, ${show_copies},
         ${show_gender}, ${show_age}, ${JSON.stringify(thumbnailPaths)},
-        ${nextOrder}, ${userId}, ${userId}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, ${language}, ${stock}
+        ${nextOrder}, ${userId}, ${userId}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, ${language}, ${stock}, ${copy_question}
       )
       RETURNING *
     `;
