@@ -1,10 +1,10 @@
 "use client";
 import React, { useState, useEffect, useCallback, useMemo } from "react";
-import { 
-  FaShoppingBag, 
-  FaTruck, 
-  FaClock, 
-  FaChevronLeft, 
+import {
+  FaShoppingBag,
+  FaTruck,
+  FaClock,
+  FaChevronLeft,
   FaChevronRight,
   FaEdit,
   FaTrash,
@@ -14,21 +14,18 @@ import {
   FaHandshake,
   FaCheckCircle,
   FaExclamationTriangle,
-  FaInfoCircle
+  FaInfoCircle,
+  FaFilter,
+  FaTimes,
+  FaEllipsisH
 } from "react-icons/fa";
 import { initializeApp } from "firebase/app";
-import { 
-  getFirestore, 
-  collection, 
-  getDocs, 
-  query, 
-  where, 
-  orderBy, 
-  limit, 
+import {
+  getFirestore,
+  collection,
   updateDoc,
   doc,
-  deleteDoc,
-  Timestamp
+  deleteDoc
 } from "firebase/firestore";
 import Header from "./Header";
 import TableUI from "./TableUI";
@@ -137,10 +134,9 @@ const ConfirmationModal = ({ isOpen, onClose, onConfirm, title, message, confirm
 const RecentOrdersPage = () => {
   const [recentOrders, setRecentOrders] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedFilter, setSelectedFilter] = useState("all");
   const [error, setError] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [ordersPerPage, setOrdersPerPage] = useState(15);
+  const [pageSize, setPageSize] = useState(50);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [showViewModal, setShowViewModal] = useState(false);
   const [showDeliveryTypeModal, setShowDeliveryTypeModal] = useState(false);
@@ -149,6 +145,34 @@ const RecentOrdersPage = () => {
   const [deliveryTypeFormData, setDeliveryTypeFormData] = useState({
     deliveryType: "",
     trackingId: ""
+  });
+  const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
+
+  // Pagination states
+  const [hasMore, setHasMore] = useState(false);
+  const [lastDocId, setLastDocId] = useState(null);
+  const [lastTimestamp, setLastTimestamp] = useState(null);
+  const [totalCount, setTotalCount] = useState(0);
+  const [allPages, setAllPages] = useState(new Map()); // Cache pages
+
+  // Filter states
+  const [filters, setFilters] = useState({
+    deliveryType: "all",
+    deliveryStatus: "all",
+    minCopies: 0,
+    maxCopies: "",
+    city: "",
+    cityMode: "include",
+    state: "",
+    stateMode: "include",
+    pincode: "",
+    pincodeMode: "include",
+    searchName: "",
+    searchNameMode: "include",
+    searchMobile: "",
+    searchMobileMode: "include",
+    dateFrom: "",
+    dateTo: "",
   });
 
   // Show toast function
@@ -163,6 +187,7 @@ const RecentOrdersPage = () => {
 
   // Memoized format functions
   const formatDisplayName = useCallback((bookName) => {
+    if (!bookName) return "Unknown Book";
     if (bookName.includes("calendar")) {
       return bookName.replace("calendar", "Panchang ");
     }
@@ -175,105 +200,299 @@ const RecentOrdersPage = () => {
       .trim();
   }, []);
 
-  // Load recent orders
-  const loadRecentOrders = useCallback(async () => {
+  // Fetch total count
+  const fetchTotalCount = useCallback(async () => {
+    try {
+      const response = await fetch(
+        `https://getbookorders-fahifz22ha-uc.a.run.app?bookName=all`
+      );
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log(result, "result")
+        if (result.success) {
+          setTotalCount(result.totalCount);
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching count:", error);
+    }
+  }, []);
+
+  // Load recent orders via API
+  const loadRecentOrders = useCallback(async (page = 1, newPageSize = pageSize) => {
     try {
       setIsLoading(true);
       setError(null);
 
-      if (!db) {
-        throw new Error("Firebase is not initialized");
-      }
-
-      const ordersCollection = collection(db, "bookorders");
-      const q = query(
-        ordersCollection,
-        orderBy("timestamp", "desc"),
-        limit(100)
-      );
-      
-      const snapshot = await getDocs(q);
-
-      if (snapshot.size === 0) {
-        setRecentOrders([]);
+      // Check if page is already cached for this page size
+      const cacheKey = `${page}-${newPageSize}`;
+      if (allPages.has(cacheKey)) {
+        const cachedData = allPages.get(cacheKey);
+        setRecentOrders(cachedData.data);
+        setLastDocId(cachedData.lastDocId);
+        setLastTimestamp(cachedData.lastTimestamp);
+        setHasMore(cachedData.hasMore);
+        setIsLoading(false);
         return;
       }
 
-      const orders = snapshot.docs.map((doc) => {
-        const data = doc.data();
-        const bookName = data.bookName || "Unknown Book";
+      let url = `https://getbookorders-fahifz22ha-uc.a.run.app?bookName=all&pageSize=${newPageSize}`;
 
-        return {
-          id: doc.id,
-          bookName: formatDisplayName(bookName),
-          rawBookName: bookName,
-          name: data["नाम"] || data["उपनाम"] || "N/A",
-          phone: data["मोबाइल नंबर"] || "N/A",
-          address: data["એડ્રેસ/एड्रेस"] || data["एड्रेस"] || "N/A",
-          city: data["शहर"] || "",
-          state: data["राज्य"] || "",
-          pincode: data["पिनकोड"] || "",
-          quantity: data["નકલ"] || 1,
-          parcelId: data.parcelId || "",
-          courierId: data.courierId || "",
-          deliveryType: data.deliveryType || "",
-          deliveredDate: data.deliveredDate || "",
-          isShipped: !!(data.parcelId && data.parcelId.trim() !== ""),
-          isDelivered: !!data.deliveredDate,
-          timestamp: data.timestamp || data.migratedAt || data.createdAt || new Date().getTime(),
-          book_quantities: data.book_quantities || {},
-          ...data
-        };
-      });
+      // For pages after the first, use pagination tokens
+      if (page > 1 && lastDocId && lastTimestamp) {
+        url += `&lastDocId=${lastDocId}&lastTimestamp=${encodeURIComponent(lastTimestamp)}`;
+      }
 
-      setRecentOrders(orders);
-      showToast("Orders loaded successfully", "success");
+      console.log("Loading orders for page:", page, "with pageSize:", newPageSize);
+
+      const response = await fetch(url);
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+
+      if (result.success && result.data) {
+        const formattedData = result.data.map((data) => {
+          const bookName = data.bookName || "Unknown Book";
+          return {
+            id: data.id,
+            bookName: formatDisplayName(bookName),
+            rawBookName: bookName,
+            name: data["नाम"] || data["उपनाम"] || "N/A",
+            phone: data["मोबाइल नंबर"] || "N/A",
+            address: data["એડ્રેસ/एड्रेस"] || data["एड्रेस"] || "N/A",
+            city: data["शहर"] || "",
+            state: data["राज्य"] || "",
+            pincode: data["पिनकोड"] || "",
+            quantity: data["નકલ"] || 1,
+            parcelId: data.parcelId || "",
+            courierId: data.courierId || "",
+            deliveryType: data.deliveryType || "",
+            deliveredDate: data.deliveredDate || "",
+            isShipped: !!(data.parcelId && data.parcelId.trim() !== ""),
+            isDelivered: !!data.deliveredDate,
+            timestamp: data.timestamp || data.migratedAt || data.createdAt || new Date().getTime(),
+            book_quantities: data.book_quantities || {},
+            ...data
+          };
+        });
+
+        // Cache the page
+        const pageCache = new Map(allPages);
+        pageCache.set(cacheKey, {
+          data: formattedData,
+          lastDocId: result.lastDocId,
+          lastTimestamp: result.lastTimestamp,
+          hasMore: result.hasMore,
+        });
+        setAllPages(pageCache);
+
+        setRecentOrders(formattedData);
+        setLastDocId(result.lastDocId);
+        setLastTimestamp(result.lastTimestamp);
+        setHasMore(result.hasMore);
+
+        console.log(`Loaded ${formattedData.length} orders for page ${page} with pageSize ${newPageSize}`);
+      } else {
+        setError(result.error || "No data received");
+      }
     } catch (error) {
       console.error("Error loading orders:", error);
-      const errorMessage = error.message || "Failed to load orders";
-      setError(errorMessage);
-      showToast(errorMessage, "error");
+      setError(error.message || "Failed to load orders");
+      showToast(error.message || "Failed to load orders", "error");
     } finally {
       setIsLoading(false);
     }
-  }, [formatDisplayName, showToast]);
+  }, [pageSize, lastDocId, lastTimestamp, allPages, formatDisplayName, showToast]);
 
-  useEffect(() => {
-    loadRecentOrders();
-  }, [loadRecentOrders]);
-
-  // Reset to page 1 when filter changes
-  useEffect(() => {
+  // Handle page size change
+  const handlePageSizeChange = (newPageSize) => {
+    setPageSize(newPageSize);
     setCurrentPage(1);
-  }, [selectedFilter]);
+    setAllPages(new Map()); // Clear cache when page size changes
+    loadRecentOrders(1, newPageSize);
+  };
 
-  // Filter orders based on selection
-  const filteredOrders = useMemo(() => {
-    return recentOrders.filter((order) => {
-      if (selectedFilter === "shipped") return order.isShipped && !order.isDelivered;
-      if (selectedFilter === "delivered") return order.isDelivered;
-      if (selectedFilter === "pending") return !order.isShipped && !order.isDelivered;
+  // Generate page numbers for pagination
+  const generatePageNumbers = () => {
+    const totalPages = Math.ceil(totalCount / pageSize);
+    const current = currentPage;
+    const delta = 2; // Number of pages to show on each side of current page
+    const pages = [];
+    const range = [];
+
+    range.push(1);
+
+    for (let i = current - delta; i <= current + delta; i++) {
+      if (i > 1 && i < totalPages) {
+        range.push(i);
+      }
+    }
+
+    if (totalPages > 1) {
+      range.push(totalPages);
+    }
+
+    // Remove duplicates and sort
+    const uniqueRange = [...new Set(range)].sort((a, b) => a - b);
+
+    let prev = 0;
+    for (const page of uniqueRange) {
+      if (page - prev > 1) {
+        pages.push('...');
+      }
+      pages.push(page);
+      prev = page;
+    }
+
+    return pages;
+  };
+
+  // Navigation functions
+  const goToPage = (page) => {
+    if (page >= 1 && page <= Math.ceil(totalCount / pageSize)) {
+      setCurrentPage(page);
+      loadRecentOrders(page);
+    }
+  };
+
+  const goToNextPage = () => {
+    if (hasMore) {
+      const nextPage = currentPage + 1;
+      setCurrentPage(nextPage);
+      loadRecentOrders(nextPage);
+    }
+  };
+
+  const goToPreviousPage = () => {
+    if (currentPage > 1) {
+      const prevPage = currentPage - 1;
+      setCurrentPage(prevPage);
+
+      // Get cached data for previous page
+      const cacheKey = `${prevPage}-${pageSize}`;
+      if (allPages.has(cacheKey)) {
+        const cachedData = allPages.get(cacheKey);
+        setRecentOrders(cachedData.data);
+        setLastDocId(cachedData.lastDocId);
+        setLastTimestamp(cachedData.lastTimestamp);
+        setHasMore(cachedData.hasMore);
+      }
+    }
+  };
+
+  // Initial load
+  useEffect(() => {
+    fetchTotalCount();
+    loadRecentOrders(1);
+  }, []); // Run once on mount
+
+  // Apply all filters to data
+  const applyFilters = (dataArray) => {
+    return dataArray.filter((item) => {
+      if (filters.deliveryType !== "all") {
+        if (filters.deliveryType === "unassigned" && item.isShipped) return false;
+        if (filters.deliveryType === "parcelId" && (!item.isShipped || item.deliveryType !== "parcelId")) return false;
+        if (filters.deliveryType !== "unassigned" && filters.deliveryType !== "parcelId" && item.deliveryType !== filters.deliveryType) return false;
+      }
+
+      // New delivery status filter
+      if (filters.deliveryStatus !== "all") {
+        if (filters.deliveryStatus === "delivered" && !item.isDelivered) return false;
+        if (filters.deliveryStatus === "notDelivered" && item.isDelivered) return false;
+      }
+
+      const copies = parseInt(item.quantity || 1, 10);
+
+      if (filters.minCopies && copies < filters.minCopies) return false;
+      if (filters.maxCopies && copies > filters.maxCopies) return false;
+
+      // Helper for text filters with multiple values and include/exclude mode
+      const checkTextFilter = (itemValue, filterValue, mode) => {
+        if (!filterValue) return true;
+
+        const values = filterValue.split(',').map(v => v.trim().toLowerCase()).filter(v => v);
+        if (values.length === 0) return true;
+
+        const itemValLower = (itemValue || "").toLowerCase();
+        const match = values.some(val => itemValLower.includes(val));
+
+        return mode === "exclude" ? !match : match;
+      };
+
+      if (!checkTextFilter(item.city, filters.city, filters.cityMode)) return false;
+      if (!checkTextFilter(item.state, filters.state, filters.stateMode)) return false;
+      if (!checkTextFilter(item.pincode, filters.pincode, filters.pincodeMode)) return false;
+
+      const fullName = (item.name || "").trim();
+      if (!checkTextFilter(fullName, filters.searchName, filters.searchNameMode)) return false;
+
+      if (!checkTextFilter(item.phone, filters.searchMobile, filters.searchMobileMode)) return false;
+
+      if (filters.dateFrom) {
+        const itemDate = new Date(item.timestamp);
+        const fromDate = new Date(filters.dateFrom);
+        if (itemDate < fromDate) return false;
+      }
+      if (filters.dateTo) {
+        const itemDate = new Date(item.timestamp);
+        const toDate = new Date(filters.dateTo);
+        toDate.setHours(23, 59, 59, 999);
+        if (itemDate > toDate) return false;
+      }
+
       return true;
     });
-  }, [recentOrders, selectedFilter]);
+  };
 
-  // Pagination calculations
-  const { currentOrders, totalPages } = useMemo(() => {
-    const totalPages = Math.ceil(filteredOrders.length / ordersPerPage);
-    const indexOfLastOrder = currentPage * ordersPerPage;
-    const indexOfFirstOrder = indexOfLastOrder - ordersPerPage;
-    const currentOrders = filteredOrders.slice(indexOfFirstOrder, indexOfLastOrder);
-    
-    return { currentOrders, totalPages };
-  }, [filteredOrders, currentPage, ordersPerPage]);
+  const filteredOrders = useMemo(() => {
+    return applyFilters(recentOrders);
+  }, [recentOrders, filters]);
 
-  // Stats
-  const stats = useMemo(() => ({
-    total: recentOrders.length,
-    shipped: recentOrders.filter((o) => o.isShipped && !o.isDelivered).length,
-    delivered: recentOrders.filter((o) => o.isDelivered).length,
-    pending: recentOrders.filter((o) => !o.isShipped && !o.isDelivered).length,
-  }), [recentOrders]);
+  const resetFilters = () => {
+    setFilters({
+      deliveryType: "all",
+      deliveryStatus: "all",
+      minCopies: 0,
+      maxCopies: "",
+      city: "",
+      cityMode: "include",
+      state: "",
+      stateMode: "include",
+      pincode: "",
+      pincodeMode: "include",
+      searchName: "",
+      searchNameMode: "include",
+      searchMobile: "",
+      searchMobileMode: "include",
+      dateFrom: "",
+      dateTo: "",
+    });
+  };
+
+  const getActiveFilterCount = () => {
+    let count = 0;
+    if (filters.deliveryType !== "all") count++;
+    if (filters.deliveryStatus !== "all") count++;
+    if (filters.minCopies > 0) count++;
+    if (filters.maxCopies) count++;
+    if (filters.city) count++;
+    if (filters.state) count++;
+    if (filters.pincode) count++;
+    if (filters.searchName) count++;
+    if (filters.searchMobile) count++;
+    if (filters.dateFrom) count++;
+    if (filters.dateTo) count++;
+    return count;
+  };
+
+  const calculateTotalCopies = (dataArray) => {
+    return dataArray.reduce((sum, item) => sum + (parseInt(item.quantity || 1, 10) || 0), 0);
+  };
 
   // Action handlers
   const handleViewOrder = useCallback((order) => {
@@ -309,13 +528,13 @@ const RecentOrdersPage = () => {
     }
   }, [selectedOrder, db, showToast]);
 
-  // Bulk mark as delivered (like in TableUI) - FIXED VERSION
+  // Bulk mark as delivered
   const handleMarkAsDelivered = useCallback(async (selectedItems, deliveryDate) => {
     try {
       const updatePromises = selectedItems.map(async (item) => {
         const orderRef = doc(db, "bookorders", item.id);
         await updateDoc(orderRef, {
-          deliveredDate: deliveryDate, // Fixed: using deliveryDate parameter
+          deliveredDate: deliveryDate,
           isDelivered: true
         });
       });
@@ -325,10 +544,10 @@ const RecentOrdersPage = () => {
       setRecentOrders(prev => prev.map(order => {
         const selectedItem = selectedItems.find(item => item.id === order.id);
         if (selectedItem) {
-          return { 
-            ...order, 
-            deliveredDate: deliveryDate, // Fixed: using deliveryDate parameter
-            isDelivered: true 
+          return {
+            ...order,
+            deliveredDate: deliveryDate,
+            isDelivered: true
           };
         }
         return order;
@@ -341,7 +560,7 @@ const RecentOrdersPage = () => {
     }
   }, [db, showToast]);
 
-  // Update delivery type only (separate from delivery date)
+  // Update delivery type
   const handleUpdateDeliveryType = useCallback(async () => {
     try {
       const orderRef = doc(db, "bookorders", selectedOrder.id);
@@ -349,35 +568,32 @@ const RecentOrdersPage = () => {
         deliveryType: deliveryTypeFormData.deliveryType
       };
 
-      // Set tracking IDs based on delivery type
       if (deliveryTypeFormData.deliveryType === "parcelId") {
         updateData.parcelId = deliveryTypeFormData.trackingId;
-        updateData.courierId = ""; // Clear courier ID
+        updateData.courierId = "";
         updateData.isShipped = true;
       } else if (deliveryTypeFormData.deliveryType === "courierId") {
         updateData.courierId = deliveryTypeFormData.trackingId;
-        updateData.parcelId = ""; // Clear parcel ID
+        updateData.parcelId = "";
         updateData.isShipped = true;
       } else if (deliveryTypeFormData.deliveryType === "handtohand") {
         updateData.parcelId = "";
         updateData.courierId = "";
         updateData.isShipped = true;
       } else {
-        // If delivery type is empty, mark as not shipped
         updateData.isShipped = false;
       }
 
       await updateDoc(orderRef, updateData);
 
-      // Update local state
-      setRecentOrders(prev => prev.map(order => 
-        order.id === selectedOrder.id 
-          ? { 
-              ...order, 
-              ...updateData,
-              parcelId: deliveryTypeFormData.deliveryType === "parcelId" ? deliveryTypeFormData.trackingId : "",
-              courierId: deliveryTypeFormData.deliveryType === "courierId" ? deliveryTypeFormData.trackingId : ""
-            }
+      setRecentOrders(prev => prev.map(order =>
+        order.id === selectedOrder.id
+          ? {
+            ...order,
+            ...updateData,
+            parcelId: deliveryTypeFormData.deliveryType === "parcelId" ? deliveryTypeFormData.trackingId : "",
+            courierId: deliveryTypeFormData.deliveryType === "courierId" ? deliveryTypeFormData.trackingId : ""
+          }
           : order
       ));
 
@@ -389,7 +605,7 @@ const RecentOrdersPage = () => {
     }
   }, [selectedOrder, deliveryTypeFormData, db, showToast]);
 
-  // Table columns configuration
+  // Table columns
   const tableColumns = useMemo(() => [
     { field: "timestamp", header: "Date" },
     { field: "bookName", header: "Book" },
@@ -405,7 +621,7 @@ const RecentOrdersPage = () => {
     { field: "deliveredDate", header: "Delivered Date" }
   ], []);
 
-  // Action buttons for table
+  // Action buttons
   const actionButtons = useCallback((item, rowIndex) => (
     <div className="flex items-center justify-center space-x-2">
       <button
@@ -432,20 +648,6 @@ const RecentOrdersPage = () => {
     </div>
   ), [handleViewOrder, handleSetDeliveryType, handleDeleteClick]);
 
-  const handlePageChange = useCallback((pageNumber) => {
-    setCurrentPage(pageNumber);
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  }, []);
-
-  const handleFilterChange = useCallback((filter) => {
-    setSelectedFilter(filter);
-  }, []);
-
-  const handleOrdersPerPageChange = useCallback((value) => {
-    setOrdersPerPage(value);
-    setCurrentPage(1);
-  }, []);
-
   if (error) {
     return (
       <div className="min-h-screen flex mt-10 items-center justify-center bg-background">
@@ -455,7 +657,7 @@ const RecentOrdersPage = () => {
           </h2>
           <p className="text-red-700 dark:text-red-300 mb-4">{error}</p>
           <button
-            onClick={loadRecentOrders}
+            onClick={() => loadRecentOrders(1)}
             className="w-full bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors"
           >
             Retry Loading
@@ -467,85 +669,382 @@ const RecentOrdersPage = () => {
 
   return (
     <div className="min-h-screen bg-background transition-colors duration-200">
-      <Header />
+      <Header
+        totalCopies={calculateTotalCopies(filteredOrders)}
+        data={filteredOrders}
+        title="Recent Orders"
+        filteredRecords={filteredOrders.length}
+        onFilterClick={() => setIsFilterPanelOpen(!isFilterPanelOpen)}
+        activeFilterCount={getActiveFilterCount()}
+      />
 
       {/* Toast Notification */}
       {toast.show && (
-        <Toast 
-          message={toast.message} 
-          type={toast.type} 
-          onClose={hideToast} 
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={hideToast}
         />
       )}
 
       <div className="p-2 md:p-4">
         <div className="bg-card rounded-md shadow-lg p-4">
-          {/* Filter Buttons */}
-          <div className="flex flex-wrap gap-2 mb-6">
-            <button
-              onClick={() => handleFilterChange("all")}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                selectedFilter === "all"
-                  ? "bg-blue-600 text-white"
-                  : "bg-muted text-foreground hover:bg-muted/80"
-              }`}
-            >
-              All Orders ({stats.total})
-            </button>
-            <button
-              onClick={() => handleFilterChange("pending")}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                selectedFilter === "pending"
-                  ? "bg-yellow-600 text-white"
-                  : "bg-muted text-foreground hover:bg-muted/80"
-              }`}
-            >
-              <FaClock className="inline mr-1" />
-              Pending ({stats.pending})
-            </button>
-            <button
-              onClick={() => handleFilterChange("shipped")}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                selectedFilter === "shipped"
-                  ? "bg-orange-600 text-white"
-                  : "bg-muted text-foreground hover:bg-muted/80"
-              }`}
-            >
-              <FaTruck className="inline mr-1" />
-              Shipped ({stats.shipped})
-            </button>
-            <button
-              onClick={() => handleFilterChange("delivered")}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                selectedFilter === "delivered"
-                  ? "bg-green-600 text-white"
-                  : "bg-muted text-foreground hover:bg-muted/80"
-              }`}
-            >
-              <FaBox className="inline mr-1" />
-              Delivered ({stats.delivered})
-            </button>
+          {/* Pagination Controls (Top) */}
+          {totalCount > 0 && (
+            <div className="flex items-center justify-between flex-wrap gap-4 mb-4">
+              <div className="text-sm text-muted-foreground">
+                Showing {Math.min(pageSize * currentPage, totalCount)} of {totalCount} orders
+              </div>
 
-            {/* Orders per page selector */}
-            <div className="ml-auto flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">Show:</span>
-              <select
-                value={ordersPerPage}
-                onChange={(e) => handleOrdersPerPageChange(Number(e.target.value))}
-                className="px-3 py-2 rounded-lg text-sm bg-muted text-foreground border border-border"
-              >
-                <option value={10}>10</option>
-                <option value={15}>15</option>
-                <option value={25}>25</option>
-                <option value={50}>50</option>
-                <option value={100}>100</option>
-              </select>
+              <div className="flex items-center gap-4">
+                {/* Page Size Dropdown */}
+                <div className="flex items-center gap-2">
+                  <label htmlFor="pageSizeTop" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Rows per page:
+                  </label>
+                  <select
+                    id="pageSizeTop"
+                    value={pageSize}
+                    onChange={(e) => handlePageSizeChange(Number(e.target.value))}
+                    className="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-200 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value={10}>10</option>
+                    <option value={20}>20</option>
+                    <option value={50}>50</option>
+                    <option value={100}>100</option>
+                    <option value={200}>200</option>
+                  </select>
+                </div>
+
+                {/* Pagination Controls */}
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={goToPreviousPage}
+                    disabled={currentPage === 1}
+                    className={"p-2 rounded flex items-center gap-1 transition-colors text-sm font-medium " + (
+                      currentPage === 1
+                        ? "bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-500 cursor-not-allowed"
+                        : "bg-blue-600 hover:bg-blue-700 text-white"
+                    )}
+                  >
+                    <FaChevronLeft size={12} />
+                  </button>
+
+                  {/* Page Numbers */}
+                  {generatePageNumbers().map((page, index) => (
+                    <React.Fragment key={index}>
+                      {page === '...' ? (
+                        <span className="px-3 py-2 text-gray-500 dark:text-gray-400">
+                          <FaEllipsisH size={12} />
+                        </span>
+                      ) : (
+                        <button
+                          onClick={() => goToPage(page)}
+                          className={`px-3 py-1 rounded text-sm font-medium transition-colors ${currentPage === page
+                            ? "bg-blue-600 text-white"
+                            : "bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
+                            }`}
+                        >
+                          {page}
+                        </button>
+                      )}
+                    </React.Fragment>
+                  ))}
+
+                  <button
+                    onClick={goToNextPage}
+                    disabled={!hasMore && currentPage === Math.ceil(totalCount / pageSize)}
+                    className={"p-2 rounded flex items-center gap-1 transition-colors text-sm font-medium " + (
+                      !hasMore && currentPage === Math.ceil(totalCount / pageSize)
+                        ? "bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-500 cursor-not-allowed"
+                        : "bg-blue-600 hover:bg-blue-700 text-white"
+                    )}
+                  >
+                    <FaChevronRight size={12} />
+                  </button>
+                </div>
+              </div>
             </div>
-          </div>
+          )}
+
+          {/* Filter Panel */}
+          {isFilterPanelOpen && (
+            <>
+              <div
+                className="fixed inset-0 bg-black/50 font-sans bg-opacity-50 z-40 transition-opacity duration-300"
+                onClick={() => setIsFilterPanelOpen(false)}
+              />
+
+              <div className={"fixed top-0 right-0 h-full w-full sm:w-96 bg-white dark:bg-gray-800 shadow-2xl z-50 transform transition-transform duration-300 ease-in-out " + (
+                isFilterPanelOpen ? 'translate-x-0' : 'translate-x-full'
+              )}>
+                <div className="flex flex-col font-mono h-full">
+                  <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+                    <div className="flex items-center gap-2">
+                      <FaFilter className="text-blue-600 dark:text-blue-400" />
+                      <h2 className="text-lg font-bold">Filters</h2>
+                      {getActiveFilterCount() > 0 && (
+                        <span className="bg-blue-600 text-white text-xs px-2 py-0.5 rounded-full">
+                          {getActiveFilterCount()}
+                        </span>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => setIsFilterPanelOpen(false)}
+                      className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                    >
+                      <FaTimes size={18} />
+                    </button>
+                  </div>
+
+                  <div className="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-4">
+                    <div>
+                      <label className="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">
+                        Delivery Type
+                      </label>
+                      <select
+                        value={filters.deliveryType}
+                        onChange={(e) => setFilters({ ...filters, deliveryType: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      >
+                        <option value="all">All Types</option>
+                        <option value="parcelId">Parcel</option>
+                        <option value="courierId">Courier</option>
+                        <option value="handtohand">Hand to Hand</option>
+                        <option value="unassigned">Unassigned</option>
+                      </select>
+                    </div>
+
+                    {/* New Delivery Status Filter */}
+                    <div>
+                      <label className="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">
+                        Delivery Status
+                      </label>
+                      <select
+                        value={filters.deliveryStatus}
+                        onChange={(e) => setFilters({ ...filters, deliveryStatus: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      >
+                        <option value="all">All Status</option>
+                        <option value="delivered">Dispatch</option>
+                        <option value="notDelivered">Not Dispatch</option>
+                      </select>
+                    </div>
+
+                    {/* Copies Range */}
+                    <div>
+                      <label className="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">
+                        Copies Range
+                      </label>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <input
+                            type="number"
+                            placeholder="Min"
+                            min="0"
+                            value={filters.minCopies || ""}
+                            onChange={(e) => setFilters({ ...filters, minCopies: parseInt(e.target.value) || 0 })}
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          />
+                        </div>
+                        <div>
+                          <input
+                            type="number"
+                            placeholder="Max"
+                            min="0"
+                            value={filters.maxCopies}
+                            onChange={(e) => setFilters({ ...filters, maxCopies: e.target.value ? parseInt(e.target.value) : "" })}
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Name Search */}
+                    <div>
+                      <div className="flex justify-between items-center mb-2">
+                        <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">
+                          Search by Name
+                        </label>
+                        <select
+                          value={filters.searchNameMode}
+                          onChange={(e) => setFilters({ ...filters, searchNameMode: e.target.value })}
+                          className="text-xs px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 focus:outline-none"
+                        >
+                          <option value="include">Include</option>
+                          <option value="exclude">Exclude</option>
+                        </select>
+                      </div>
+                      <input
+                        type="text"
+                        placeholder="Enter names (comma separated)..."
+                        value={filters.searchName}
+                        onChange={(e) => setFilters({ ...filters, searchName: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">Separate multiple names with commas</p>
+                    </div>
+
+                    {/* Mobile Search */}
+                    <div>
+                      <div className="flex justify-between items-center mb-2">
+                        <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">
+                          Search by Mobile
+                        </label>
+                        <select
+                          value={filters.searchMobileMode}
+                          onChange={(e) => setFilters({ ...filters, searchMobileMode: e.target.value })}
+                          className="text-xs px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 focus:outline-none"
+                        >
+                          <option value="include">Include</option>
+                          <option value="exclude">Exclude</option>
+                        </select>
+                      </div>
+                      <input
+                        type="text"
+                        placeholder="Enter mobile numbers (comma separated)..."
+                        value={filters.searchMobile}
+                        onChange={(e) => setFilters({ ...filters, searchMobile: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">Separate multiple numbers with commas</p>
+                    </div>
+
+                    {/* City */}
+                    <div>
+                      <div className="flex justify-between items-center mb-2">
+                        <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">
+                          City
+                        </label>
+                        <select
+                          value={filters.cityMode}
+                          onChange={(e) => setFilters({ ...filters, cityMode: e.target.value })}
+                          className="text-xs px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 focus:outline-none"
+                        >
+                          <option value="include">Include</option>
+                          <option value="exclude">Exclude</option>
+                        </select>
+                      </div>
+                      <input
+                        type="text"
+                        placeholder="Enter cities (comma separated)..."
+                        value={filters.city}
+                        onChange={(e) => setFilters({ ...filters, city: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">Separate multiple cities with commas</p>
+                    </div>
+
+                    {/* State */}
+                    <div>
+                      <div className="flex justify-between items-center mb-2">
+                        <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">
+                          State
+                        </label>
+                        <select
+                          value={filters.stateMode}
+                          onChange={(e) => setFilters({ ...filters, stateMode: e.target.value })}
+                          className="text-xs px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 focus:outline-none"
+                        >
+                          <option value="include">Include</option>
+                          <option value="exclude">Exclude</option>
+                        </select>
+                      </div>
+                      <input
+                        type="text"
+                        placeholder="Enter states (comma separated)..."
+                        value={filters.state}
+                        onChange={(e) => setFilters({ ...filters, state: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">Separate multiple states with commas</p>
+                    </div>
+
+                    {/* Pincode */}
+                    <div>
+                      <div className="flex justify-between items-center mb-2">
+                        <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">
+                          Pincode
+                        </label>
+                        <select
+                          value={filters.pincodeMode}
+                          onChange={(e) => setFilters({ ...filters, pincodeMode: e.target.value })}
+                          className="text-xs px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 focus:outline-none"
+                        >
+                          <option value="include">Include</option>
+                          <option value="exclude">Exclude</option>
+                        </select>
+                      </div>
+                      <input
+                        type="text"
+                        placeholder="Enter pincodes (comma separated)..."
+                        value={filters.pincode}
+                        onChange={(e) => setFilters({ ...filters, pincode: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">Separate multiple pincodes with commas</p>
+                    </div>
+
+                    {/* Date Range */}
+                    <div>
+                      <label className="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">
+                        Date Range
+                      </label>
+                      <div className="space-y-2">
+                        <div>
+                          <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">From</label>
+                          <input
+                            type="date"
+                            value={filters.dateFrom}
+                            onChange={(e) => setFilters({ ...filters, dateFrom: e.target.value })}
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">To</label>
+                          <input
+                            type="date"
+                            value={filters.dateTo}
+                            onChange={(e) => setFilters({ ...filters, dateTo: e.target.value })}
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Filter Results Summary */}
+                    <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+                      <div className="text-sm font-medium text-blue-900 dark:text-blue-300">
+                        Results: <span className="font-bold">{filteredOrders.length}</span> orders
+                      </div>
+                      <div className="text-sm text-blue-700 dark:text-blue-400 mt-1">
+                        Total Copies: <span className="font-bold">{calculateTotalCopies(filteredOrders)}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="p-4 border-t border-gray-200 dark:border-gray-700 space-y-2">
+                    <button
+                      onClick={resetFilters}
+                      className="w-full px-4 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-lg font-medium transition-colors"
+                    >
+                      Reset All Filters
+                    </button>
+                    <button
+                      onClick={() => setIsFilterPanelOpen(false)}
+                      className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
+                    >
+                      Apply Filters
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
 
           {/* Table */}
           <TableUI
-            data={currentOrders}
+            data={filteredOrders}
             loading={isLoading}
             columns={tableColumns}
             extraData={[]}
@@ -557,56 +1056,7 @@ const RecentOrdersPage = () => {
             onRowClick={handleViewOrder}
           />
 
-          {/* Pagination */}
-          {filteredOrders.length > 0 && (
-            <div className="flex items-center justify-between mt-6 flex-wrap gap-4">
-              <div className="text-sm text-muted-foreground">
-                Showing {Math.min(ordersPerPage, currentOrders.length)} of {filteredOrders.length} orders
-              </div>
 
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => handlePageChange(currentPage - 1)}
-                  disabled={currentPage === 1}
-                  className={`p-2 rounded-lg transition-colors ${
-                    currentPage === 1
-                      ? "bg-muted text-muted-foreground cursor-not-allowed"
-                      : "bg-muted text-foreground hover:bg-muted/80"
-                  }`}
-                >
-                  <FaChevronLeft />
-                </button>
-
-                <span className="px-3 py-2 text-sm">
-                  Page {currentPage} of {totalPages}
-                </span>
-
-                <button
-                  onClick={() => handlePageChange(currentPage + 1)}
-                  disabled={currentPage === totalPages}
-                  className={`p-2 rounded-lg transition-colors ${
-                    currentPage === totalPages
-                      ? "bg-muted text-muted-foreground cursor-not-allowed"
-                      : "bg-muted text-foreground hover:bg-muted/80"
-                  }`}
-                >
-                  <FaChevronRight />
-                </button>
-              </div>
-
-              <select
-                value={currentPage}
-                onChange={(e) => handlePageChange(Number(e.target.value))}
-                className="px-3 py-2 rounded-lg text-sm bg-background text-foreground border border-border"
-              >
-                {[...Array(totalPages)].map((_, i) => (
-                  <option key={i + 1} value={i + 1}>
-                    Page {i + 1}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
         </div>
       </div>
 
@@ -643,14 +1093,13 @@ const RecentOrdersPage = () => {
                   <p><strong>Order Date:</strong> {new Date(selectedOrder.timestamp).toLocaleDateString()}</p>
                   <p><strong>Delivery Type:</strong> {selectedOrder.deliveryType || "Not set"}</p>
                   <p><strong>Tracking ID:</strong> {selectedOrder.parcelId || selectedOrder.courierId || "Not set"}</p>
-                  <p><strong>Status:</strong> 
-                    <span className={`ml-2 px-2 py-1 rounded-full text-xs font-semibold ${
-                      selectedOrder.isDelivered 
-                        ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
-                        : selectedOrder.isShipped
+                  <p><strong>Status:</strong>
+                    <span className={`ml-2 px-2 py-1 rounded-full text-xs font-semibold ${selectedOrder.isDelivered
+                      ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
+                      : selectedOrder.isShipped
                         ? "bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300"
                         : "bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300"
-                    }`}>
+                      }`}>
                       {selectedOrder.isDelivered ? "Delivered" : selectedOrder.isShipped ? "Shipped" : "Pending"}
                     </span>
                   </p>
@@ -688,8 +1137,8 @@ const RecentOrdersPage = () => {
                 <label className="block mb-2 font-semibold">Delivery Type:</label>
                 <select
                   value={deliveryTypeFormData.deliveryType}
-                  onChange={(e) => setDeliveryTypeFormData(prev => ({ 
-                    ...prev, 
+                  onChange={(e) => setDeliveryTypeFormData(prev => ({
+                    ...prev,
                     deliveryType: e.target.value,
                     trackingId: e.target.value === "handtohand" ? "" : prev.trackingId
                   }))}
@@ -715,18 +1164,17 @@ const RecentOrdersPage = () => {
                   />
                 </div>
               )}
-              
+
               {/* Current Status Display */}
               <div className="p-3 bg-gray-100 dark:bg-gray-700 rounded">
                 <h4 className="font-semibold mb-2">Current Status:</h4>
                 <p><strong>Delivery Type:</strong> {selectedOrder.deliveryType || "Not set"}</p>
                 <p><strong>Tracking ID:</strong> {selectedOrder.parcelId || selectedOrder.courierId || "Not set"}</p>
-                <p><strong>Shipping Status:</strong> 
-                  <span className={`ml-2 px-2 py-1 rounded-full text-xs font-semibold ${
-                    selectedOrder.isShipped 
-                      ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
-                      : "bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300"
-                  }`}>
+                <p><strong>Shipping Status:</strong>
+                  <span className={`ml-2 px-2 py-1 rounded-full text-xs font-semibold ${selectedOrder.isShipped
+                    ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
+                    : "bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300"
+                    }`}>
                     {selectedOrder.isShipped ? "Shipped" : "Not Shipped"}
                   </span>
                 </p>
@@ -775,577 +1223,23 @@ const RecentOrdersPage = () => {
         .animate-slide-in {
           animation: slide-in 0.3s ease-out;
         }
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 8px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: hsl(var(--muted));
+          border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: hsl(var(--muted-foreground) / 0.3);
+          border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: hsl(var(--muted-foreground) / 0.5);
+        }
       `}</style>
     </div>
   );
 };
 
 export default RecentOrdersPage;
-
-
-
-
-
-// "use client";
-// import React, { useState, useEffect, useCallback } from "react";
-// import {
-//   FaShoppingBag,
-//   FaTruck,
-//   FaClock,
-//   FaChevronLeft,
-//   FaChevronRight,
-// } from "react-icons/fa";
-// import { initializeApp } from "firebase/app";
-// import { getFirestore, collection, getDocs, query, where, orderBy, limit } from "firebase/firestore";
-// import Header from "./Header";
-
-// // Firebase configuration
-// const firebaseConfig = {
-//   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-//   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-//   projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-//   storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-//   messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-//   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
-//   measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
-// };
-
-// // Initialize Firebase
-// let app;
-// let db;
-
-// try {
-//   app = initializeApp(firebaseConfig);
-//   db = getFirestore(app);
-// } catch (error) {
-//   console.log("Firebase already initialized or error:", error);
-// }
-
-// // Memoized Loading Skeleton Component
-// const TableSkeleton = React.memo(({ rowCount = 10 }) => {
-//   return (
-//     <div className="overflow-x-auto custom-scrollbar">
-//       <table className="w-full text-sm border-collapse table-auto text-foreground">
-//         <thead className="bg-muted text-foreground">
-//           <tr>
-//             <th className="p-2 text-left whitespace-nowrap">Date</th>
-//             <th className="p-2 text-left whitespace-nowrap">Book</th>
-//             <th className="p-2 text-left whitespace-nowrap">Name</th>
-//             <th className="p-2 text-left whitespace-nowrap">Phone</th>
-//             <th className="p-2 text-left whitespace-nowrap">Address</th>
-//             <th className="p-2 text-left whitespace-nowrap">Status</th>
-//             <th className="p-2 text-left whitespace-nowrap">Tracking ID</th>
-//             <th className="p-2 text-left whitespace-nowrap">Qty</th>
-//           </tr>
-//         </thead>
-//         <tbody>
-//           {[...Array(rowCount)].map((_, index) => (
-//             <tr key={index} className="border-b border-border">
-//               <td className="p-2">
-//                 <div className="h-4 rounded bg-muted animate-pulse w-24" />
-//               </td>
-//               <td className="p-2">
-//                 <div className="h-4 rounded bg-muted animate-pulse w-32" />
-//               </td>
-//               <td className="p-2">
-//                 <div className="h-4 rounded bg-muted animate-pulse w-28" />
-//               </td>
-//               <td className="p-2">
-//                 <div className="h-4 rounded bg-muted animate-pulse w-48" />
-//               </td>
-//               <td className="p-2">
-//                 <div className="h-6 rounded-full bg-muted animate-pulse w-20" />
-//               </td>
-//               <td className="p-2">
-//                 <div className="h-4 rounded bg-muted animate-pulse w-20" />
-//               </td>
-//               <td className="p-2">
-//                 <div className="h-4 rounded bg-muted animate-pulse w-24" />
-//               </td>
-//               <td className="p-2">
-//                 <div className="h-4 rounded bg-muted animate-pulse w-8 mx-auto" />
-//               </td>
-//             </tr>
-//           ))}
-//         </tbody>
-//       </table>
-//     </div>
-//   );
-// });
-
-// TableSkeleton.displayName = 'TableSkeleton';
-
-// // Memoized Pagination Component
-// const Pagination = React.memo(({ currentPage, totalPages, onPageChange }) => {
-//   const getPageNumbers = useCallback(() => {
-//     const pages = [];
-//     const maxVisible = 5;
-
-//     if (totalPages <= maxVisible) {
-//       for (let i = 1; i <= totalPages; i++) {
-//         pages.push(i);
-//       }
-//     } else {
-//       if (currentPage <= 3) {
-//         for (let i = 1; i <= 4; i++) pages.push(i);
-//         pages.push("...");
-//         pages.push(totalPages);
-//       } else if (currentPage >= totalPages - 2) {
-//         pages.push(1);
-//         pages.push("...");
-//         for (let i = totalPages - 3; i <= totalPages; i++) pages.push(i);
-//       } else {
-//         pages.push(1);
-//         pages.push("...");
-//         pages.push(currentPage - 1);
-//         pages.push(currentPage);
-//         pages.push(currentPage + 1);
-//         pages.push("...");
-//         pages.push(totalPages);
-//       }
-//     }
-
-//     return pages;
-//   }, [currentPage, totalPages]);
-
-//   return (
-//     <div className="flex items-center justify-between mt-6 flex-wrap gap-4">
-//       <div className="text-sm text-muted-foreground">
-//         Showing page {currentPage} of {totalPages}
-//       </div>
-
-//       <div className="flex items-center gap-2">
-//         <button
-//           onClick={() => onPageChange(currentPage - 1)}
-//           disabled={currentPage === 1}
-//           className={`p-2 rounded-lg transition-colors ${
-//             currentPage === 1
-//               ? "bg-muted text-muted-foreground cursor-not-allowed"
-//               : "bg-muted text-foreground hover:bg-muted/80"
-//           }`}
-//         >
-//           <FaChevronLeft />
-//         </button>
-
-//         {getPageNumbers().map((page, index) => (
-//           <button
-//             key={index}
-//             onClick={() => typeof page === "number" && onPageChange(page)}
-//             disabled={page === "..."}
-//             className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-//               page === currentPage
-//                 ? "bg-blue-600 text-white"
-//                 : page === "..."
-//                 ? "text-muted-foreground cursor-default"
-//                 : "bg-muted text-foreground hover:bg-muted/80"
-//             }`}
-//           >
-//             {page}
-//           </button>
-//         ))}
-
-//         <button
-//           onClick={() => onPageChange(currentPage + 1)}
-//           disabled={currentPage === totalPages}
-//           className={`p-2 rounded-lg transition-colors ${
-//             currentPage === totalPages
-//               ? "bg-muted text-muted-foreground cursor-not-allowed"
-//               : "bg-muted text-foreground hover:bg-muted/80"
-//           }`}
-//         >
-//           <FaChevronRight />
-//         </button>
-//       </div>
-
-//       <select
-//         value={currentPage}
-//         onChange={(e) => onPageChange(Number(e.target.value))}
-//         className="px-3 py-2 rounded-lg text-sm bg-background text-foreground border border-border"
-//       >
-//         {[...Array(totalPages)].map((_, i) => (
-//           <option key={i + 1} value={i + 1}>
-//             Page {i + 1}
-//           </option>
-//         ))}
-//       </select>
-//     </div>
-//   );
-// });
-
-// Pagination.displayName = 'Pagination';
-
-// const RecentOrdersPage = () => {
-//   const [recentOrders, setRecentOrders] = useState([]);
-//   const [isLoading, setIsLoading] = useState(true);
-//   const [selectedFilter, setSelectedFilter] = useState("all");
-//   const [error, setError] = useState(null);
-//   const [currentPage, setCurrentPage] = useState(1);
-//   const [ordersPerPage, setOrdersPerPage] = useState(15);
-
-//   // Memoized format functions
-//   const formatDisplayName = useCallback((bookName) => {
-//     if (bookName.includes("calendar")) {
-//       return bookName.replace("calendar", "Panchang ");
-//     }
-//     return bookName
-//       .replace(/([A-Z])/g, ' $1')
-//       .replace(/[-_]/g, ' ')
-//       .split(' ')
-//       .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-//       .join(' ')
-//       .trim();
-//   }, []);
-
-//   const formatDate = useCallback((timestamp) => {
-//     try {
-//       const date = typeof timestamp === "object" && timestamp.toDate
-//         ? timestamp.toDate()
-//         : new Date(timestamp);
-
-//       const now = new Date();
-//       const diffInMs = now - date;
-//       const diffInMinutes = Math.floor(diffInMs / 60000);
-//       const diffInHours = Math.floor(diffInMs / 3600000);
-//       const diffInDays = Math.floor(diffInMs / 86400000);
-
-//       if (diffInMinutes < 1) return "Just now";
-//       if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
-//       if (diffInHours < 24) return `${diffInHours}h ago`;
-//       if (diffInDays < 7) return `${diffInDays}d ago`;
-
-//       return date.toLocaleDateString("en-IN", {
-//         day: "numeric",
-//         month: "short",
-//         year: date.getFullYear() !== now.getFullYear() ? "numeric" : undefined,
-//       });
-//     } catch (e) {
-//       return "Unknown";
-//     }
-//   }, []);
-
-//   // Optimized load function - only loads 100 most recent orders
-//   const loadRecentOrders = useCallback(async () => {
-//     try {
-//       setIsLoading(true);
-//       setError(null);
-
-//       if (!db) {
-//         throw new Error("Firebase is not initialized");
-//       }
-
-//       // Only get the 100 most recent orders to minimize reads
-//       const ordersCollection = collection(db, "bookorders");
-//       const q = query(
-//         ordersCollection,
-//         orderBy("timestamp", "desc"),
-//         limit(100) // Only load 100 most recent orders
-//       );
-      
-//       const snapshot = await getDocs(q);
-
-//       if (snapshot.size === 0) {
-//         setRecentOrders([]);
-//         return;
-//       }
-
-//       const orders = snapshot.docs.map((doc) => {
-//         const data = doc.data();
-//         const bookName = data.bookName || "Unknown Book";
-
-//         return {
-//           id: doc.id,
-//           bookName: formatDisplayName(bookName),
-//           rawBookName: bookName,
-//           name: data["नाम"] || data["उपनाम"] || "N/A",
-//           phone: data["मोबाइल नंबर"] || "N/A",
-//           address: data["એડ્રેસ/एड्रेस"] || "N/A",
-//           city: data["शहर"] || "",
-//           state: data["राज्य"] || "",
-//           pincode: data["पिनकोड"] || "",
-//           quantity: data["નકલ"] || 1,
-//           parcelId: data.parcelId || "",
-//           isShipped: !!(data.parcelId && data.parcelId.trim() !== ""),
-//           timestamp: data.timestamp || data.migratedAt || data.createdAt || new Date().getTime(),
-//         };
-//       });
-
-//       setRecentOrders(orders);
-//     } catch (error) {
-//       console.error("Error loading orders:", error);
-//       setError(error.message || "Failed to load orders");
-//     } finally {
-//       setIsLoading(false);
-//     }
-//   }, [formatDisplayName]);
-
-//   useEffect(() => {
-//     loadRecentOrders();
-//   }, [loadRecentOrders]);
-
-//   // Reset to page 1 when filter changes
-//   useEffect(() => {
-//     setCurrentPage(1);
-//   }, [selectedFilter]);
-
-//   // Memoized filtered orders
-//   const filteredOrders = React.useMemo(() => {
-//     return recentOrders.filter((order) => {
-//       if (selectedFilter === "shipped") return order.isShipped;
-//       if (selectedFilter === "pending") return !order.isShipped;
-//       return true;
-//     });
-//   }, [recentOrders, selectedFilter]);
-
-//   // Memoized pagination calculations
-//   const { currentOrders, totalPages } = React.useMemo(() => {
-//     const totalPages = Math.ceil(filteredOrders.length / ordersPerPage);
-//     const indexOfLastOrder = currentPage * ordersPerPage;
-//     const indexOfFirstOrder = indexOfLastOrder - ordersPerPage;
-//     const currentOrders = filteredOrders.slice(indexOfFirstOrder, indexOfLastOrder);
-    
-//     return { currentOrders, totalPages };
-//   }, [filteredOrders, currentPage, ordersPerPage]);
-
-//   // Memoized stats
-//   const stats = React.useMemo(() => ({
-//     total: recentOrders.length,
-//     shipped: recentOrders.filter((o) => o.isShipped).length,
-//     pending: recentOrders.filter((o) => !o.isShipped).length,
-//   }), [recentOrders]);
-
-//   const handlePageChange = useCallback((pageNumber) => {
-//     setCurrentPage(pageNumber);
-//     window.scrollTo({ top: 0, behavior: "smooth" });
-//   }, []);
-
-//   const handleFilterChange = useCallback((filter) => {
-//     setSelectedFilter(filter);
-//   }, []);
-
-//   const handleOrdersPerPageChange = useCallback((value) => {
-//     setOrdersPerPage(value);
-//     setCurrentPage(1);
-//   }, []);
-
-//   if (error) {
-//     return (
-//       <div className="min-h-screen flex mt-10 items-center justify-center bg-background">
-//         <div className="bg-red-100 dark:bg-red-900/20 p-8 rounded-xl shadow-lg max-w-md">
-//           <h2 className="text-xl font-bold text-red-800 dark:text-red-400 mb-2">
-//             Error Loading Orders
-//           </h2>
-//           <p className="text-red-700 dark:text-red-300 mb-4">{error}</p>
-//           <button
-//             onClick={loadRecentOrders}
-//             className="w-full bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors"
-//           >
-//             Retry Loading
-//           </button>
-//         </div>
-//       </div>
-//     );
-//   }
-
-//   return (
-//     <div className="min-h-screen mt-16 bg-background transition-colors duration-200">
-//       <Header />
-
-//       <div className="p-2 md:p-4">
-//         <div className="bg-card rounded-md shadow-lg p-4">
-//           {/* Filter Buttons */}
-//           <div className="flex flex-wrap gap-2 mb-6">
-//             <button
-//               onClick={() => handleFilterChange("all")}
-//               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-//                 selectedFilter === "all"
-//                   ? "bg-blue-600 text-white"
-//                   : "bg-muted text-foreground hover:bg-muted/80"
-//               }`}
-//             >
-//               All Recent Orders ({stats.total})
-//             </button>
-//             <button
-//               onClick={() => handleFilterChange("shipped")}
-//               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-//                 selectedFilter === "shipped"
-//                   ? "bg-green-600 text-white"
-//                   : "bg-muted text-foreground hover:bg-muted/80"
-//               }`}
-//             >
-//               <FaTruck className="inline mr-1" />
-//               Shipped ({stats.shipped})
-//             </button>
-//             <button
-//               onClick={() => handleFilterChange("pending")}
-//               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-//                 selectedFilter === "pending"
-//                   ? "bg-yellow-600 text-white"
-//                   : "bg-muted text-foreground hover:bg-muted/80"
-//               }`}
-//             >
-//               <FaClock className="inline mr-1" />
-//               Pending ({stats.pending})
-//             </button>
-
-//             {/* Orders per page selector */}
-//             <div className="ml-auto flex items-center gap-2">
-//               <span className="text-sm text-muted-foreground">Show:</span>
-//               <select
-//                 value={ordersPerPage}
-//                 onChange={(e) => handleOrdersPerPageChange(Number(e.target.value))}
-//                 className="px-3 py-2 rounded-lg text-sm bg-muted text-foreground border border-border"
-//               >
-//                 <option value={10}>10</option>
-//                 <option value={15}>15</option>
-//                 <option value={25}>25</option>
-//                 <option value={50}>50</option>
-//                 <option value={100}>100</option>
-//               </select>
-//             </div>
-//           </div>
-
-         
-
-//           {/* Orders List or Skeleton */}
-//           {isLoading ? (
-//             <TableSkeleton rowCount={ordersPerPage} />
-//           ) : (
-//             <>
-//               <div className="overflow-x-auto custom-scrollbar">
-//                 {currentOrders.length === 0 ? (
-//                   <div className="text-center py-12 text-muted-foreground">
-//                     <FaShoppingBag className="mx-auto text-4xl mb-3 opacity-50" />
-//                     <p className="text-lg">No orders found</p>
-//                     <p className="text-sm mt-2">
-//                       Try changing the filter or check back later
-//                     </p>
-//                   </div>
-//                 ) : (
-//                   <table className="w-full text-sm border-collapse table-auto text-foreground">
-//                     <thead className="bg-muted text-foreground">
-//                       <tr>
-//                         <th className="p-2 text-left whitespace-nowrap">Date</th>
-//                         <th className="p-2 text-left whitespace-nowrap">Book</th>
-//                         <th className="p-2 text-left whitespace-nowrap">Name</th>
-//                         <th className="p-2 text-left whitespace-nowrap">Phone</th>
-//                         <th style={{ width: '200px' }} className="p-2 text-left whitespace-nowrap">
-//                           Address
-//                         </th>
-//                         <th className="p-2 text-left whitespace-nowrap">City & Pincode</th>
-//                         <th className="p-2 text-left whitespace-nowrap">State</th>
-//                         <th className="p-2 text-left whitespace-nowrap">Status</th>
-//                         <th className="p-2 text-left whitespace-nowrap">Tracking ID</th>
-//                         <th className="p-2 text-left whitespace-nowrap">Qty</th>
-//                       </tr>
-//                     </thead>
-//                     <tbody>
-//                       {currentOrders.map((order) => (
-//                         <TableRow 
-//                           key={order.id} 
-//                           order={order} 
-//                           formatDate={formatDate} 
-//                         />
-//                       ))}
-//                     </tbody>
-//                   </table>
-//                 )}
-//               </div>
-
-//               {/* Pagination */}
-//               {filteredOrders.length > 0 && (
-//                 <Pagination
-//                   currentPage={currentPage}
-//                   totalPages={totalPages}
-//                   onPageChange={handlePageChange}
-//                 />
-//               )}
-//             </>
-//           )}
-
-//           <style jsx>{`
-//             .custom-scrollbar::-webkit-scrollbar {
-//               width: 8px;
-//             }
-//             .custom-scrollbar::-webkit-scrollbar-track {
-//               background: hsl(var(--muted));
-//               border-radius: 4px;
-//             }
-//             .custom-scrollbar::-webkit-scrollbar-thumb {
-//               background: hsl(var(--muted-foreground) / 0.3);
-//               border-radius: 4px;
-//             }
-//             .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-//               background: hsl(var(--muted-foreground) / 0.5);
-//             }
-//           `}</style>
-//         </div>
-//       </div>
-//     </div>
-//   );
-// };
-
-// // Memoized Table Row Component for better performance
-// const TableRow = React.memo(({ order, formatDate }) => {
-//   return (
-//     <tr className="border-b border-border hover:bg-muted/50 transition-colors duration-150">
-//       <td className="p-2 whitespace-nowrap text-green-700 dark:text-green-400 font-bold align-middle">
-//         {formatDate(order.timestamp)}
-//       </td>
-//       <td className="p-2 whitespace-nowrap">
-//         <span className="font-semibold text-blue-600 dark:text-blue-400">
-//           {order.bookName}
-//         </span>
-//       </td>
-//       <td className="p-2 whitespace-nowrap">
-//         <span>{order.name}</span>
-//       </td>
-//       <td className="p-2 whitespace-nowrap">
-//         <span>{order.phone}</span>
-//       </td>
-//       <td
-//         className="p-2 whitespace-normal align-middle"
-//         style={{ width: '200px', maxWidth: '200px' }}
-//       >
-//         <span className="break-words">{order.address}</span>
-//       </td>
-//       <td className="p-2 truncate align-middle">
-//         <span className="truncate">
-//           {order.city && ` ${order.city}`}
-//           <br />
-//           {order.pincode && `  ${order.pincode}`}
-//         </span>
-//       </td>
-//       <td className="p-2 truncate align-middle">
-//         <span className="truncate">{order.state && ` ${order.state}`}</span>
-//       </td>
-//       <td className="p-2 whitespace-nowrap align-middle">
-//         <span
-//           className={`px-2 py-1 rounded-full text-xs font-semibold inline-flex items-center gap-1 ${
-//             order.isShipped
-//               ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
-//               : "bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300"
-//           }`}
-//         >
-//           {order.isShipped ? <FaTruck /> : <FaClock />}
-//           {order.isShipped ? "Shipped" : "Pending"}
-//         </span>
-//       </td>
-//       <td className="p-2 whitespace-nowrap align-middle">
-//         {order.isShipped && order.parcelId ? (
-//           <code className="px-2 py-1 rounded text-xs bg-muted">
-//             {order.parcelId}
-//           </code>
-//         ) : (
-//           "-"
-//         )}
-//       </td>
-//       <td className="p-2 text-center align-middle font-bold text-blue-500">
-//         {order.quantity || 1}
-//       </td>
-//     </tr>
-//   );
-// });
-
-// TableRow.displayName = 'TableRow';
-
-// export default RecentOrdersPage;

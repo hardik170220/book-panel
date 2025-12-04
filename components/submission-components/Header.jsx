@@ -585,7 +585,7 @@ const Header = ({
               </div>
 
               {/* Export Dropdown */}
-              {!isDashboardPage && !isRecentOrdersPage && (
+              {!isDashboardPage && (
                 <div className="relative" ref={exportMenuRef}>
                   <button
                     onClick={() => setIsExportOpen(!isExportOpen)}
@@ -625,7 +625,7 @@ const Header = ({
               )}
 
               {/* Filter Button with Badge */}
-              {!isDashboardPage && !isRecentOrdersPage && (
+              {!isDashboardPage && (
                 <button
                   onClick={onFilterClick}
                   className="relative flex items-center gap-1.5 px-3 py-2 bg-muted hover:bg-muted/80 text-foreground text-sm font-medium rounded-lg transition-colors"
