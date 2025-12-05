@@ -264,7 +264,7 @@ const RecentOrdersPage = () => {
             rawBookName: bookName,
             name: data["नाम"] || data["उपनाम"] || "N/A",
             phone: data["मोबाइल नंबर"] || "N/A",
-            address: data["એડ્રેસ/एड्रेस"] || data["एड्रेस"] || "N/A",
+            address: data["એડ્રેસ/एड्रेस"] || data["एड्रेस"] || data["એડ્રેસ"] || "N/A",
             city: data["शहर"] || "",
             state: data["राज्य"] || "",
             pincode: data["पिनकोड"] || "",
@@ -277,6 +277,7 @@ const RecentOrdersPage = () => {
             isDelivered: !!data.deliveredDate,
             timestamp: data.timestamp || data.migratedAt || data.createdAt || new Date().getTime(),
             book_quantities: data.book_quantities || {},
+            registrationId: data.registrationId || "N/A",
             ...data
           };
         });
@@ -608,6 +609,7 @@ const RecentOrdersPage = () => {
   // Table columns
   const tableColumns = useMemo(() => [
     { field: "timestamp", header: "Date" },
+    { field: "registrationId", header: "Order ID" },
     { field: "bookName", header: "Book" },
     { field: "name", header: "Name" },
     { field: "phone", header: "Phone" },
