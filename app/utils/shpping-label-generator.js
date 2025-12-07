@@ -49,7 +49,7 @@ export const generateShippingLabelsPDF = async (data, title) => {
 
     // Generate content for shipping labels
     const content = [];
-    const labelsPerPage = 7;
+    const labelsPerPage = 8;
     const labelHeight = 50;
 
     for (let i = 0; i < data.length; i += labelsPerPage) {
@@ -70,6 +70,9 @@ export const generateShippingLabelsPDF = async (data, title) => {
 
         // Capitalize title
         const formattedTitle = title ? title.charAt(0).toUpperCase() + title.slice(1) : "";
+
+        // Use book name if available, otherwise fall back to title
+        const displayTitle = item.bookName.charAt(0).toUpperCase() + item.bookName.slice(1) || formattedTitle;
 
         // Receiver information with vertical centering
         const receiverInfo = {
@@ -104,32 +107,24 @@ export const generateShippingLabelsPDF = async (data, title) => {
                 },
                 { text: `${registrationId}`, fontSize: 12, bold: true, alignment: 'left', margin: [0, 2, 0, 0] }
               ],
-              margin: [0, 20, 0, 0] // Top margin to center vertically
+              margin: [0, 5, 0, 0] // Top margin to center vertically
             }
           ],
           margin: [0, 0, 0, 0]
         };
 
-        // Sender information with Logo Watermark (Centered)
+        // Sender information (No Watermark)
         const senderInfo = {
           stack: [
-            // Logo centered and behind text (simulated with negative margin)
-            {
-              image: logoDataUrl,
-              width: 50,
-              opacity: 0.1,
-              alignment: 'center',
-              margin: [0, 0, 0, 0]
-            },
             {
               stack: [
                 { text: "From:", fontSize: 10, bold: true },
                 { text: "Adhyatm Parivar, Adhyatm Bhavan, 3rd Floor", fontSize: 8, bold: true },
                 { text: "Anand Shravak Aradhana Bhavan, Shanti Vardhak Jain Sangh, Near Sanjeev Kumar Auditorium, Pal, Surat - 395009", fontSize: 8 },
                 { text: "Contact: 7676769600", fontSize: 8 },
-                { text: `${formattedTitle} - ${copies}`, fontSize: 12, bold: true, alignment: 'right', margin: [0, 2, 0, 0] }
+                { text: `${displayTitle} - ${copies}`, fontSize: 12, bold: true, alignment: 'right', margin: [0, 2, 0, 0] }
               ],
-              margin: [0, -50, 0, 0] // Pull text up to overlap with image
+              margin: [0, 0, 0, 0]
             }
           ],
           margin: [0, 0, 0, 0]
