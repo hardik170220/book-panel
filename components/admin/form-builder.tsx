@@ -113,6 +113,43 @@ export function FormBuilder({
   );
 
   const [draft, setDraft] = useState<FormDraft>(initial);
+  const [slugError, setSlugError] = useState<string>("");
+
+  function validateSlug(slug: string) {
+    if (/[A-Z]/.test(slug)) {
+      setSlugError("Slug must be lowercase only.");
+      return "Slug must be lowercase only.";
+    }
+
+    if (/\s/.test(slug)) {
+      setSlugError("Slug cannot contain spaces.");
+      return "Slug cannot contain spaces.";
+    }
+
+    if (/[^a-z0-9-]/.test(slug)) {
+      setSlugError("Slug contains invalid characters. Only letters, numbers, and hyphens allowed.");
+      return "Slug contains invalid characters. Only letters, numbers, and hyphens allowed.";
+    }
+
+    if (slug.startsWith('-') || slug.endsWith('-')) {
+      setSlugError("Slug cannot start or end with a hyphen.");
+      return "Slug cannot start or end with a hyphen.";
+    }
+
+    if (/--/.test(slug)) {
+      setSlugError("Slug cannot contain consecutive hyphens.");
+      return "Slug cannot contain consecutive hyphens.";
+    }
+
+    setSlugError("");
+    return "";
+  }
+
+  function handleSlugChange(value: string) {
+    setField("slug", value);
+    validateSlug(value);
+  }
+
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
@@ -200,25 +237,6 @@ export function FormBuilder({
     });
   }
 
-  //         function getFormLink(slug :any) {
-  //   if (slug === "bhagwan-mahavir") {
-  //     return "https://bhagwanmahavirform-fahifz22ha-uc.a.run.app";
-  //   } else if (slug === "udayanmantri") {
-  //     return "https://udayanmantriform-fahifz22ha-uc.a.run.app";
-  //   } else if (slug === "mahabharat") {
-  //     return "https://mahabharatform-fahifz22ha-uc.a.run.app";
-  //   } else if (slug === "ravanni-bhitarma") {
-  //     return "https://ravannibhitarmaform-fahifz22ha-uc.a.run.app";
-  //   }else if (slug === "aapno-gyanvaibhav") {
-  //     return "https://universalform-fahifz22ha-uc.a.run.app/aapnoGyanvaibhavForm";
-  //   }
-  //    else if (slug === "calendar-2082") {
-  //     return "https://calendar2082form-fahifz22ha-uc.a.run.app";
-  //   } else {
-  //     return `https://universalform-fahifz22ha-uc.a.run.app/${slug}`;
-  //   }
-  // }
-
   function getFormLink(slug: any) {
     // Special cases with fixed slug names
     if (slug === "aapno-gyanvaibhav") {
@@ -294,13 +312,10 @@ export function FormBuilder({
       return;
     }
 
-    // Validate slug format (optional but recommended)
-    const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-    if (!slugPattern.test(draft.slug.trim())) {
-      toast({
-        description: "Slug must contain only lowercase letters, numbers, and hyphens.",
-        variant: "destructive"
-      });
+    // Validate slug format
+    const slugValidationError = validateSlug(draft.slug.trim());
+    if (slugValidationError) {
+      // Focus on slug input if possible, but the error text is already visible
       return;
     }
 
@@ -488,13 +503,20 @@ export function FormBuilder({
                 id="slug"
                 placeholder="Enter the Slug of form (lowercase, hyphens allowed)"
                 value={draft.slug}
-                onChange={(e) => setField("slug", e.target.value)}
+                onChange={(e) => handleSlugChange(e.target.value)}
                 required
                 maxLength={255}
+                className={slugError ? "border-red-500 focus-visible:ring-red-500" : ""}
               />
-              <p className="text-xs text-muted-foreground">
-                Only lowercase letters, numbers, and hyphens are allowed. Must be unique.
-              </p>
+              {slugError ? (
+                <p className="text-xs text-red-500 font-medium">
+                  {slugError}
+                </p>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  Only lowercase letters, numbers, and hyphens are allowed. Must be unique.
+                </p>
+              )}
             </div>
 
             <div className="grid gap-2">
@@ -714,7 +736,7 @@ export function FormBuilder({
             <div className="grid gap-2">
               <Label htmlFor="stock">Stock</Label>
               <p className="text-sm text-muted-foreground mb-2">
-                Enter the number of books present in stock.
+                0 means unlimited stock is present.
               </p>
               <Input
                 id="stock"
@@ -744,9 +766,9 @@ export function FormBuilder({
 
             <div className="flex items-center justify-between rounded border p-3">
               <div className="space-y-0.5">
-                <Label htmlFor="show">Show on Event Page</Label>
+                <Label htmlFor="show">Show on Home Page</Label>
                 <p className="text-sm text-muted-foreground">
-                  show forms are appear on the event page.
+                  show forms are appear on the Home page.
                 </p>
               </div>
               <Switch

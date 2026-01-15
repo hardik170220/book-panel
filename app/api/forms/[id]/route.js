@@ -8,23 +8,22 @@ import { v4 as uuidv4 } from 'uuid';
 const sql = neon(process.env.DATABASE_URL);
 
 // Helper to get current user from request
+import { getToken } from "next-auth/jwt";
+
 async function getCurrentUser(request) {
   try {
-    const cookieHeader = request.headers.get('cookie');
-
-    const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http';
-    const host = request.headers.get('host');
-    const whoamiUrl = `${protocol}://${host}/api/whoami`;
-
-    const whoamiRes = await fetch(whoamiUrl, {
-      headers: {
-        cookie: cookieHeader || '',
-      },
+    const token = await getToken({
+      req: request,
+      secret: process.env.NEXTAUTH_SECRET,
     });
 
-    if (whoamiRes.ok) {
-      const userData = await whoamiRes.json();
-      return userData;
+    if (token) {
+      return {
+        id: token.sub,
+        name: token.name,
+        email: token.email,
+        role: token.role
+      };
     }
     return null;
   } catch (error) {
