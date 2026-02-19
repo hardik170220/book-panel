@@ -49,6 +49,8 @@ const DynamicBookOrderPage = () => {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [itemToDeleteIndex, setItemToDeleteIndex] = useState(null);
   const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
+  const [editAddress, setEditAddress] = useState("");
+  const [editPhone, setEditPhone] = useState("");
 
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
@@ -144,6 +146,9 @@ const DynamicBookOrderPage = () => {
   // Apply all filters to data
   const applyFilters = (dataArray) => {
     return dataArray.filter((item) => {
+      // Filter out deleted records
+      if (item.isDelete === true) return false;
+
       if (filters.deliveryType !== "all") {
         if (filters.deliveryType === "unassigned" && item.hasParcel) return false;
         if (filters.deliveryType === "parcelId" && (!item.hasParcel || item.deliveryType !== "parcelId")) return false;
@@ -513,6 +518,8 @@ const DynamicBookOrderPage = () => {
     setCurrentEditItem({ ...item, index });
     setParcelId(item.parcelId || "");
     setDeliveryType(item.deliveryType || "parcelId");
+    setEditAddress(item.address || "");
+    setEditPhone(item.phone || "");
     setEditModalOpen(true);
   };
 
@@ -526,7 +533,10 @@ const DynamicBookOrderPage = () => {
       const index = itemToDeleteIndex;
       const itemToDelete = data[index];
 
-      await deleteDoc(doc(db, "bookorders", itemToDelete.id));
+      await updateDoc(doc(db, "bookorders", itemToDelete.id), {
+        isDelete: true,
+        deletedAt: new Date().getTime()
+      });
 
       const newData = [...data];
       newData.splice(index, 1);
@@ -542,7 +552,7 @@ const DynamicBookOrderPage = () => {
 
       setUpdateStatus({
         type: "success",
-        message: "Order deleted successfully",
+        message: "Order moved to recycling bin",
       });
       setTimeout(() => setUpdateStatus(null), 3000);
 
@@ -573,11 +583,19 @@ const DynamicBookOrderPage = () => {
       const itemToUpdate = currentEditItem;
       const orderDocRef = doc(db, "bookorders", itemToUpdate.id);
 
+      // Determine which keys were used for mobile and address in the original data
+      const phoneKey = Object.keys(itemToUpdate).find(key => key === "मोबाइल नंबर") || "मोबाइल नंबर";
+      const addressKey = Object.keys(itemToUpdate).find(key =>
+        ["એડ્રેસ/एड्रेस", "एड्रेस", "એડ્રેસ"].includes(key)
+      ) || "एड्रेस";
+
       await updateDoc(orderDocRef, {
         parcelId: deliveryType === "handtohand" ? "On Hand" : parcelId.trim(),
         deliveryType: deliveryType,
         hasParcel: true,
         lastUpdated: new Date(),
+        [phoneKey]: editPhone,
+        [addressKey]: editAddress
       });
 
       const newData = [...data];
@@ -587,6 +605,10 @@ const DynamicBookOrderPage = () => {
         deliveryType: deliveryType,
         hasParcel: true,
         lastUpdated: new Date(),
+        phone: editPhone,
+        address: editAddress,
+        [phoneKey]: editPhone,
+        [addressKey]: editAddress
       };
       newData.sort((a, b) => b.timestamp - a.timestamp);
       setData(newData);
@@ -845,8 +867,8 @@ const DynamicBookOrderPage = () => {
                       <button
                         onClick={() => goToPage(page)}
                         className={`px-3 py-1 rounded text-sm font-medium transition-colors ${currentPage === page
-                            ? "bg-blue-600 text-white"
-                            : "bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
+                          ? "bg-blue-600 text-white"
+                          : "bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
                           }`}
                       >
                         {page}
@@ -1161,10 +1183,10 @@ const DynamicBookOrderPage = () => {
 
         {/* Edit Modal */}
         {editModalOpen && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 animate-fadeIn">
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 animate-fadeIn text-sm">
             <div className="rounded-sm font-anek p-6 w-full max-w-md animate-scaleIn bg-card shadow-lg border border-border">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-bold text-foreground">Add Parcel Information</h2>
+              <div className="flex justify-between items-center mb-4 border-b border-border pb-2">
+                <h2 className="text-xl font-bold text-foreground">Edit Order Information</h2>
                 <button
                   onClick={() => setEditModalOpen(false)}
                   className="p-1 rounded-full hover:bg-muted"
@@ -1173,51 +1195,71 @@ const DynamicBookOrderPage = () => {
                 </button>
               </div>
 
-              <div className="mb-4">
-                <label
-                  className="block text-sm font-bold mb-2 text-foreground"
-                  htmlFor="deliveryType"
-                >
-                  Delivery Type
-                </label>
-                <select
-                  id="deliveryType"
-                  value={deliveryType}
-                  onChange={(e) => setDeliveryType(e.target.value)}
-                  className="bg-background text-foreground shadow appearance-none border border-border rounded w-full py-2 px-3 leading-tight focus:outline-none focus:shadow-outline"
-                >
-                  <option value="parcelId">Parcel ID</option>
-                  <option value="courierId">Courier ID</option>
-                  <option value="handtohand">Hand to Hand</option>
-                </select>
-              </div>
-
-              {deliveryType !== "handtohand" && (
-                <div className="mb-4">
-                  <label
-                    className="block text-sm font-bold mb-2 text-foreground"
-                    htmlFor="parcelId"
-                  >
-                    {deliveryType === "parcelId"
-                      ? "Parcel Tracking ID"
-                      : "Courier ID"}
-                  </label>
-                  <input
-                    id="parcelId"
-                    type="text"
-                    value={parcelId}
-                    onChange={(e) => setParcelId(e.target.value)}
-                    className="bg-background text-foreground shadow appearance-none border border-border placeholder:text-sm rounded w-full py-2 px-3 leading-tight focus:outline-none focus:shadow-outline"
-                    placeholder={
-                      deliveryType === "parcelId"
-                        ? "Enter parcel tracking ID"
-                        : "Enter courier ID"
-                    }
+              <div className="space-y-4 max-h-[60vh] overflow-y-auto px-1 custom-scrollbar">
+                <div>
+                  <label className="block text-sm font-bold mb-1 text-foreground">Address</label>
+                  <textarea
+                    value={editAddress}
+                    onChange={(e) => setEditAddress(e.target.value)}
+                    className="bg-background text-foreground shadow appearance-none border border-border rounded w-full py-2 px-3 leading-tight focus:outline-none focus:shadow-outline"
+                    rows={3}
                   />
                 </div>
-              )}
+                <div>
+                  <label className="block text-sm font-bold mb-1 text-foreground">Mobile Number</label>
+                  <input
+                    type="text"
+                    value={editPhone}
+                    onChange={(e) => setEditPhone(e.target.value)}
+                    className="bg-background text-foreground shadow appearance-none border border-border rounded w-full py-2 px-3 leading-tight focus:outline-none focus:shadow-outline"
+                  />
+                </div>
+                <div className="border-t pt-4">
+                  <label
+                    className="block text-sm font-bold mb-2 text-foreground"
+                    htmlFor="deliveryType"
+                  >
+                    Delivery Type
+                  </label>
+                  <select
+                    id="deliveryType"
+                    value={deliveryType}
+                    onChange={(e) => setDeliveryType(e.target.value)}
+                    className="bg-background text-foreground shadow appearance-none border border-border rounded w-full py-2 px-3 leading-tight focus:outline-none focus:shadow-outline"
+                  >
+                    <option value="parcelId">Parcel ID</option>
+                    <option value="courierId">Courier ID</option>
+                    <option value="handtohand">Hand to Hand</option>
+                  </select>
+                </div>
 
-              <div className="flex justify-end gap-2">
+                {deliveryType !== "handtohand" && (
+                  <div className="mb-4">
+                    <label
+                      className="block text-sm font-bold mb-2 text-foreground"
+                      htmlFor="parcelId"
+                    >
+                      {deliveryType === "parcelId"
+                        ? "Parcel Tracking ID"
+                        : "Courier ID"}
+                    </label>
+                    <input
+                      id="parcelId"
+                      type="text"
+                      value={parcelId}
+                      onChange={(e) => setParcelId(e.target.value)}
+                      className="bg-background text-foreground shadow appearance-none border border-border placeholder:text-sm rounded w-full py-2 px-3 leading-tight focus:outline-none focus:shadow-outline"
+                      placeholder={
+                        deliveryType === "parcelId"
+                          ? "Enter parcel tracking ID"
+                          : "Enter courier ID"
+                      }
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div className="flex justify-end gap-2 mt-6 pt-4 border-t border-border">
                 <button
                   onClick={() => setEditModalOpen(false)}
                   className="bg-red-700 hover:bg-red-800 text-gray-200 text-sm font-bold py-1 px-4 rounded-sm"
@@ -1228,7 +1270,7 @@ const DynamicBookOrderPage = () => {
                   onClick={handleSaveParcelId}
                   className="bg-green-600 hover:bg-green-700 text-sm text-white font-bold py-1 px-4 rounded-sm"
                 >
-                  Save
+                  Save Changes
                 </button>
               </div>
             </div>
@@ -1320,12 +1362,7 @@ const DynamicBookOrderPage = () => {
                     <p className="text-sm text-muted-foreground">Order Date</p>
                     <p className="font-medium text-foreground">
                       {currentViewItem?.timestamp &&
-                        `${new Date(
-                          currentViewItem.timestamp
-                        ).toLocaleDateString("en-IN")} 
-                ${new Date(currentViewItem.timestamp).toLocaleTimeString(
-                          "en-IN"
-                        )}`}
+                        `${new Date(currentViewItem.timestamp).toLocaleDateString("en-IN")} ${new Date(currentViewItem.timestamp).toLocaleTimeString("en-IN")}`}
                     </p>
                   </div>
                 </div>

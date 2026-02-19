@@ -101,7 +101,7 @@ const TableUI = ({
   const formatCellContent = (item, field) => {
     if (!item || field === undefined) return 'N/A';
     
-    if (field === 'timestamp' && item.timestamp) {
+    if (field === 'timestamp' || field === 'deletedAt' && item.timestamp) {
       return new Date(item.timestamp).toLocaleDateString("en-IN") + " " + new Date(item.timestamp).toLocaleTimeString("en-IN");
     }
 
@@ -130,9 +130,9 @@ const TableUI = ({
   const isMahabharatBook = bookName === "Mahabharat Book" ? true : false;
 
   return (
-    <div className={"flex flex-col h-[76vh]" + (isMahabharatBook ? ' mt-16' : '')}>
+    <div className={"max-w-[90vw] bg-gray-100 dark:bg-gray-800 mx-auto flex flex-col h-[76vh]" + (isMahabharatBook ? ' mt-16' : '')}>
       {/* Fixed Search Header */}
-      <div className="sticky top-0 z-30 bg-gray-800 text-white dark:bg-gray-200 dark:text-gray-800 py-2 px-4 md:px-8 w-full">
+      <div className="sticky top-0 z-30 bg-gray-800 text-white dark:bg-gray-200 dark:text-gray-800 py-2 px-4  w-full">
         <div className="flex flex-col md:flex-row justify-between items-center">
           <h1 className="text-lg capitalize font-poppins font-bold mb-2 md:mb-0">
             {bookName} {" "}

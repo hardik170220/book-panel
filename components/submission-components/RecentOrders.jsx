@@ -112,6 +112,9 @@ const ConfirmationModal = ({ isOpen, onClose, onConfirm, title, message, confirm
           <h3 className="text-lg font-semibold">{title}</h3>
         </div>
         <p className="text-gray-600 dark:text-gray-300 mb-6">{message}</p>
+        {confirmText === "Delete" && (
+          <p className="text-xs text-red-500 mb-4">* This will move the order to deleted items.</p>
+        )}
         <div className="flex justify-end space-x-3">
           <button
             onClick={onClose}
@@ -144,7 +147,9 @@ const RecentOrdersPage = () => {
   const [toast, setToast] = useState({ show: false, message: "", type: "info" });
   const [deliveryTypeFormData, setDeliveryTypeFormData] = useState({
     deliveryType: "",
-    trackingId: ""
+    trackingId: "",
+    address: "",
+    phone: ""
   });
   const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
 
@@ -395,6 +400,9 @@ const RecentOrdersPage = () => {
   // Apply all filters to data
   const applyFilters = (dataArray) => {
     return dataArray.filter((item) => {
+      // Filter out deleted records
+      if (item.isDelete === true) return false;
+
       if (filters.deliveryType !== "all") {
         if (filters.deliveryType === "unassigned" && item.isShipped) return false;
         if (filters.deliveryType === "parcelId" && (!item.isShipped || item.deliveryType !== "parcelId")) return false;
@@ -505,7 +513,9 @@ const RecentOrdersPage = () => {
     setSelectedOrder(order);
     setDeliveryTypeFormData({
       deliveryType: order.deliveryType || "",
-      trackingId: order.parcelId || order.courierId || ""
+      trackingId: order.parcelId || order.courierId || "",
+      address: order.address || "",
+      phone: order.phone || ""
     });
     setShowDeliveryTypeModal(true);
   }, []);
@@ -519,12 +529,15 @@ const RecentOrdersPage = () => {
     if (!selectedOrder) return;
 
     try {
-      await deleteDoc(doc(db, "bookorders", selectedOrder.id));
+      await updateDoc(doc(db, "bookorders", selectedOrder.id), {
+        isDelete: true,
+        deletedAt: new Date().getTime()
+      });
       setRecentOrders(prev => prev.filter(o => o.id !== selectedOrder.id));
-      showToast("Order deleted successfully", "success");
+      showToast("Order moved to recycling bin", "success");
       setShowDeleteModal(false);
     } catch (error) {
-      console.error("Error deleting order:", error);
+      console.error("Error soft deleting order:", error);
       showToast("Failed to delete order", "error");
     }
   }, [selectedOrder, db, showToast]);
@@ -565,8 +578,18 @@ const RecentOrdersPage = () => {
   const handleUpdateDeliveryType = useCallback(async () => {
     try {
       const orderRef = doc(db, "bookorders", selectedOrder.id);
+
+      // Determine which keys were used for mobile and address in the original data
+      // fallback to standard keys if not found
+      const phoneKey = Object.keys(selectedOrder).find(key => key === "मोबाइल नंबर") || "मोबाइल नंबर";
+      const addressKey = Object.keys(selectedOrder).find(key =>
+        ["એડ્રેસ/एड्रेस", "एड्रेस", "એડ્રેસ"].includes(key)
+      ) || "एड्रेस";
+
       const updateData = {
-        deliveryType: deliveryTypeFormData.deliveryType
+        deliveryType: deliveryTypeFormData.deliveryType,
+        [phoneKey]: deliveryTypeFormData.phone,
+        [addressKey]: deliveryTypeFormData.address
       };
 
       if (deliveryTypeFormData.deliveryType === "parcelId") {
@@ -592,8 +615,10 @@ const RecentOrdersPage = () => {
           ? {
             ...order,
             ...updateData,
-            parcelId: deliveryTypeFormData.deliveryType === "parcelId" ? deliveryTypeFormData.trackingId : "",
-            courierId: deliveryTypeFormData.deliveryType === "courierId" ? deliveryTypeFormData.trackingId : ""
+            phone: deliveryTypeFormData.phone,
+            address: deliveryTypeFormData.address,
+            parcelId: deliveryTypeFormData.deliveryType === "parcelId" ? deliveryTypeFormData.trackingId : (deliveryTypeFormData.deliveryType === "handtohand" ? "" : order.parcelId),
+            courierId: deliveryTypeFormData.deliveryType === "courierId" ? deliveryTypeFormData.trackingId : (deliveryTypeFormData.deliveryType === "handtohand" ? "" : order.courierId)
           }
           : order
       ));
@@ -635,7 +660,7 @@ const RecentOrdersPage = () => {
       </button>
       <button
         onClick={() => handleSetDeliveryType(item)}
-        className="p-1 text-gray-700 hover:text-gray-800 transition-colors"
+        className="p-1 text-yellow-700 hover:text-yellow-800 transition-colors"
         title="Set Delivery Type"
       >
         <FaEdit size={14} />
@@ -689,7 +714,7 @@ const RecentOrdersPage = () => {
         />
       )}
 
-      <div className="p-2 md:p-4">
+      <div className="p-2 md:p-0">
         <div className="bg-card rounded-md shadow-lg p-4">
           {/* Pagination Controls (Top) */}
           {totalCount > 0 && (
@@ -1126,7 +1151,7 @@ const RecentOrdersPage = () => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold">Set Delivery Type</h2>
+              <h2 className="text-xl font-bold">Edit Order</h2>
               <button
                 onClick={() => setShowDeliveryTypeModal(false)}
                 className="text-gray-500 hover:text-gray-700 text-2xl"
@@ -1134,8 +1159,26 @@ const RecentOrdersPage = () => {
                 ×
               </button>
             </div>
-            <div className="space-y-4">
+            <div className="space-y-4 max-h-[70vh] overflow-y-auto px-1">
               <div>
+                <label className="block mb-1 text-sm font-semibold">Address:</label>
+                <textarea
+                  value={deliveryTypeFormData.address}
+                  onChange={(e) => setDeliveryTypeFormData(prev => ({ ...prev, address: e.target.value }))}
+                  className="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  rows={3}
+                />
+              </div>
+              <div>
+                <label className="block mb-1 text-sm font-semibold">Mobile Number:</label>
+                <input
+                  type="text"
+                  value={deliveryTypeFormData.phone}
+                  onChange={(e) => setDeliveryTypeFormData(prev => ({ ...prev, phone: e.target.value }))}
+                  className="w-full p-2 border rounded dark:bg-gray-700 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+              <div className="border-t pt-4">
                 <label className="block mb-2 font-semibold">Delivery Type:</label>
                 <select
                   value={deliveryTypeFormData.deliveryType}
@@ -1168,7 +1211,7 @@ const RecentOrdersPage = () => {
               )}
 
               {/* Current Status Display */}
-              <div className="p-3 bg-gray-100 dark:bg-gray-700 rounded">
+              {/* <div className="p-3 bg-gray-100 dark:bg-gray-700 rounded">
                 <h4 className="font-semibold mb-2">Current Status:</h4>
                 <p><strong>Delivery Type:</strong> {selectedOrder.deliveryType || "Not set"}</p>
                 <p><strong>Tracking ID:</strong> {selectedOrder.parcelId || selectedOrder.courierId || "Not set"}</p>
@@ -1180,7 +1223,7 @@ const RecentOrdersPage = () => {
                     {selectedOrder.isShipped ? "Shipped" : "Not Shipped"}
                   </span>
                 </p>
-              </div>
+              </div> */}
             </div>
             <div className="flex justify-end space-x-3 mt-6">
               <button
@@ -1193,7 +1236,7 @@ const RecentOrdersPage = () => {
                 onClick={handleUpdateDeliveryType}
                 className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded font-semibold transition-colors"
               >
-                Update Delivery Type
+                Update Order
               </button>
             </div>
           </div>

@@ -18,6 +18,7 @@ import {
   ListOrdered,
   ChevronLeft,
   ChevronRight,
+  Trash2,
 } from "lucide-react"
 import {
   Select,
@@ -44,7 +45,7 @@ export function Sidebar() {
   const { theme, setTheme } = useTheme()
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const [isCollapsed, setIsCollapsed] = useState(true)
-  
+
   const { data: session, status } = useSession()
   const user = session?.user
 
@@ -57,10 +58,10 @@ export function Sidebar() {
   }, [user, pathname, router, status])
 
   useEffect(() => {
-  console.log("Session status:", status)
-  console.log("User role:", session?.user?.role)
-  console.log("Current path:", pathname)
-}, [status, session, pathname])
+    console.log("Session status:", status)
+    console.log("User role:", session?.user?.role)
+    console.log("Current path:", pathname)
+  }, [status, session, pathname])
 
   const allItems = [
     {
@@ -82,7 +83,16 @@ export function Sidebar() {
       href: "/admin/bookorder",
       label: "Submissions",
       icon: <ListOrdered className="h-4 w-4" />,
-      match: (p: string) => p.startsWith("/admin/bookorder"),
+      match: (p: string) =>
+        (p === "/admin/bookorder" || p.startsWith("/admin/bookorder/")) &&
+        !p.startsWith("/admin/bookorder/deleted-orders"),
+      roles: ["submission-admin", "super admin"],
+    },
+    {
+      href: "/admin/bookorder/deleted-orders",
+      label: "Deleted Items",
+      icon: <Trash2 className="h-4 w-4" />,
+      match: (p: string) => p.startsWith("/admin/bookorder/deleted-orders"),
       roles: ["submission-admin", "super admin"],
     },
   ]
@@ -121,12 +131,12 @@ export function Sidebar() {
   }
 
   return (
-    <aside 
+    <aside
       className={cn(
         "md:sticky md:top-0 font-poppins h-dvh md:h-[100dvh] flex flex-col border-r bg-background overflow-y-auto transition-all duration-300 relative",
         isCollapsed ? "w-16" : "w-64"
       )}
-      style={{overflow:"visible"}}
+      style={{ overflow: "visible" }}
     >
       {/* Toggle Button */}
       <button
