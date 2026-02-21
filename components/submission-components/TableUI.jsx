@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import { Table, Thead, Tbody, Tr, Th, Td } from "react-super-responsive-table";
 import "react-super-responsive-table/dist/SuperResponsiveTableStyle.css";
-import { FaCheckSquare, FaSquare } from "react-icons/fa";
+import { FaCheckSquare, FaSquare, FaSort, FaSortUp, FaSortDown } from "react-icons/fa";
 
 const TableUI = ({ 
   data, 
@@ -23,14 +23,73 @@ const TableUI = ({
   const [showDeliveryModal, setShowDeliveryModal] = useState(false);
   const [deliveryDate, setDeliveryDate] = useState(new Date().toISOString().split('T')[0]);
 
-  // Sort data by date in descending order (assuming there's a timestamp field)
+  // Column sorting state
+  const [sortField, setSortField] = useState(null);
+  const [sortDirection, setSortDirection] = useState("asc"); // "asc" | "desc"
+
+  const handleSort = (field) => {
+    if (sortField === field) {
+      if (sortDirection === "asc") {
+        setSortDirection("desc");
+      } else {
+        // Third click: clear sort
+        setSortField(null);
+        setSortDirection("asc");
+      }
+    } else {
+      setSortField(field);
+      setSortDirection("asc");
+    }
+  };
+
+  // Sort data — if a column sort is active use it, otherwise fall back to timestamp desc
   const sortedData = React.useMemo(() => {
-    return [...data].sort((a, b) => {
-      const dateA = a.timestamp ? new Date(a.timestamp) : new Date(0);
-      const dateB = b.timestamp ? new Date(b.timestamp) : new Date(0);
-      return dateB - dateA; // Descending order (newest first)
-    });
-  }, [data]);
+    const arr = [...data];
+    if (sortField) {
+      arr.sort((a, b) => {
+        let valA = a[sortField];
+        let valB = b[sortField];
+
+        // Handle nested fields like "book_quantities.key"
+        if (sortField.includes('.')) {
+          const [parent, child] = sortField.split('.');
+          valA = a[parent]?.[child];
+          valB = b[parent]?.[child];
+        }
+
+        // Dates
+        if (sortField === 'timestamp' || sortField === 'deliveredDate') {
+          valA = valA ? new Date(valA).getTime() : 0;
+          valB = valB ? new Date(valB).getTime() : 0;
+        }
+
+        // Nulls to bottom
+        if (valA === undefined || valA === null || valA === 'N/A') valA = '';
+        if (valB === undefined || valB === null || valB === 'N/A') valB = '';
+
+        // Numeric comparison
+        const numA = Number(valA);
+        const numB = Number(valB);
+        if (!isNaN(numA) && !isNaN(numB) && valA !== '' && valB !== '') {
+          return sortDirection === "asc" ? numA - numB : numB - numA;
+        }
+
+        // String comparison
+        const strA = valA.toString().toLowerCase();
+        const strB = valB.toString().toLowerCase();
+        if (strA < strB) return sortDirection === "asc" ? -1 : 1;
+        if (strA > strB) return sortDirection === "asc" ? 1 : -1;
+        return 0;
+      });
+    } else {
+      arr.sort((a, b) => {
+        const dateA = a.timestamp ? new Date(a.timestamp) : new Date(0);
+        const dateB = b.timestamp ? new Date(b.timestamp) : new Date(0);
+        return dateB - dateA; // Default: newest first
+      });
+    }
+    return arr;
+  }, [data, sortField, sortDirection]);
 
   const filteredData = sortedData.filter((item) => {
     if (!searchTerm.trim()) return true;
@@ -220,10 +279,24 @@ const TableUI = ({
                 <Th 
                   key={index} 
                   className="border-b py-3 text-left px-2"
+                  style={{ userSelect: 'none' }}
                 >
-                  <div style={{fontSize:".7rem"}} className="flex font-poppins items-center">
+                  <button
+                    onClick={() => handleSort(column.field)}
+                    style={{ fontSize: ".7rem" }}
+                    className="flex font-poppins items-center gap-1 hover:text-blue-400 transition-colors w-full text-left"
+                    title={`Sort by ${column.header}`}
+                  >
                     {column.header}
-                  </div>
+                    <span className="ml-1 opacity-60">
+                      {sortField === column.field
+                        ? sortDirection === "asc"
+                          ? <FaSortUp size={10} className="text-blue-500 opacity-100" />
+                          : <FaSortDown size={10} className="text-blue-500 opacity-100" />
+                        : <FaSort size={10} />
+                      }
+                    </span>
+                  </button>
                 </Th>
               ))}
               {actionButtons && <Th className="border-b py-3 text-center px-2">Actions</Th>}

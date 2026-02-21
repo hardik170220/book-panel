@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { FaEye, FaEdit, FaTrash, FaTimes, FaCheck, FaFilter, FaChevronLeft, FaChevronRight, FaEllipsisH } from "react-icons/fa";
@@ -56,10 +56,14 @@ const DynamicBookOrderPage = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(50);
   const [hasMore, setHasMore] = useState(false);
-  const [lastDocId, setLastDocId] = useState(null);
-  const [lastTimestamp, setLastTimestamp] = useState(null);
   const [totalCount, setTotalCount] = useState(0);
   const [allPages, setAllPages] = useState(new Map()); // Cache pages
+
+  // Use refs for cursor tokens so they are ALWAYS current inside callbacks (no stale closure)
+  const lastDocIdRef = useRef(null);
+  const lastTimestampRef = useRef(null);
+  const allPagesRef = useRef(new Map()); // mirror of allPages for synchronous cache reads
+  const pageSizeRef = useRef(50);
 
   // Filter states
   const [filters, setFilters] = useState({
@@ -272,7 +276,9 @@ const DynamicBookOrderPage = () => {
   }, [bookName]);
 
   // Load book orders with pagination
-  const loadBookOrderData = useCallback(async (page = 1, newPageSize = pageSize) => {
+  // NOTE: Uses refs for cursor tokens so this callback never goes stale
+  const loadBookOrderData = useCallback(async (page = 1, newPageSize) => {
+    const effectivePageSize = newPageSize ?? pageSizeRef.current;
     try {
       setLoading(true);
       setError(null);
@@ -283,14 +289,16 @@ const DynamicBookOrderPage = () => {
         return;
       }
 
-      // Check if page is already cached for this page size
-      const cacheKey = `${page}-${newPageSize}`;
-      if (allPages.has(cacheKey)) {
-        const cachedData = allPages.get(cacheKey);
+      // Check if page is already cached — use ref for instant, synchronous read
+      const cacheKey = `${page}-${effectivePageSize}`;
+      if (allPagesRef.current.has(cacheKey)) {
+        const cachedData = allPagesRef.current.get(cacheKey);
         setData(cachedData.data);
-        setLastDocId(cachedData.lastDocId);
-        setLastTimestamp(cachedData.lastTimestamp);
+        // Restore cursor tokens for this page so next-page works correctly
+        lastDocIdRef.current = cachedData.lastDocId;
+        lastTimestampRef.current = cachedData.lastTimestamp;
         setHasMore(cachedData.hasMore);
+        setTotalCopies(calculateTotalCopies(cachedData.data));
         setLoading(false);
         return;
       }
@@ -299,14 +307,14 @@ const DynamicBookOrderPage = () => {
         ? bookName
         : bookName.toLowerCase().replace(/\s+/g, "-");
 
-      let url = `https://getbookorders-fahifz22ha-uc.a.run.app?bookName=${encodeURIComponent(normalizedBookName)}&pageSize=${newPageSize}`;
+      let url = `https://getbookorders-fahifz22ha-uc.a.run.app?bookName=${encodeURIComponent(normalizedBookName)}&pageSize=${effectivePageSize}`;
 
-      // For pages after the first, use pagination tokens
-      if (page > 1 && lastDocId && lastTimestamp) {
-        url += `&lastDocId=${lastDocId}&lastTimestamp=${encodeURIComponent(lastTimestamp)}`;
+      // For pages after the first, use cursor tokens from refs (always current)
+      if (page > 1 && lastDocIdRef.current && lastTimestampRef.current) {
+        url += `&lastDocId=${lastDocIdRef.current}&lastTimestamp=${encodeURIComponent(lastTimestampRef.current)}`;
       }
 
-      console.log("Loading orders for page:", page, "with pageSize:", newPageSize);
+      console.log("Loading orders for page:", page, "with pageSize:", effectivePageSize);
 
       const response = await fetch(url);
 
@@ -316,7 +324,7 @@ const DynamicBookOrderPage = () => {
       }
 
       const result = await response.json();
-      console.log(result, "result")
+      console.log(result, "result");
 
       if (result.success && result.data) {
         const formattedData = result.data.map(item => ({
@@ -324,24 +332,26 @@ const DynamicBookOrderPage = () => {
           timestamp: new Date(item.timestamp)
         }));
 
-        // Cache the page with pageSize as part of the key
-        const pageCache = new Map(allPages);
+        // Update cursor refs immediately (synchronous, no stale read risk)
+        lastDocIdRef.current = result.lastDocId;
+        lastTimestampRef.current = result.lastTimestamp;
+
+        // Cache the page
+        const pageCache = new Map(allPagesRef.current);
         pageCache.set(cacheKey, {
           data: formattedData,
           lastDocId: result.lastDocId,
           lastTimestamp: result.lastTimestamp,
           hasMore: result.hasMore,
         });
+        allPagesRef.current = pageCache;
         setAllPages(pageCache);
 
         setData(formattedData);
-        // console.log(formattedData,"formattedData")
-        setLastDocId(result.lastDocId);
-        setLastTimestamp(result.lastTimestamp);
         setHasMore(result.hasMore);
         setTotalCopies(calculateTotalCopies(formattedData));
 
-        console.log(`Loaded ${formattedData.length} orders for page ${page} with pageSize ${newPageSize}`);
+        console.log(`Loaded ${formattedData.length} orders for page ${page} with pageSize ${effectivePageSize}`);
       } else {
         setError(result.error || "No data received");
       }
@@ -351,13 +361,18 @@ const DynamicBookOrderPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [bookName, pageSize, lastDocId, lastTimestamp, allPages]);
+  }, [bookName]); // Only bookName as dep — refs handle the rest
 
   // Handle page size change
   const handlePageSizeChange = (newPageSize) => {
+    pageSizeRef.current = newPageSize;
     setPageSize(newPageSize);
     setCurrentPage(1);
-    setAllPages(new Map()); // Clear cache when page size changes
+    // Clear both ref and state cache when page size changes
+    allPagesRef.current = new Map();
+    setAllPages(new Map());
+    lastDocIdRef.current = null;
+    lastTimestampRef.current = null;
     loadBookOrderData(1, newPageSize);
   };
 
@@ -396,7 +411,8 @@ const DynamicBookOrderPage = () => {
 
   // Navigation functions
   const goToPage = (page) => {
-    if (page >= 1 && page <= Math.ceil(totalCount / pageSize)) {
+    const totalPages = Math.ceil(totalCount / pageSizeRef.current);
+    if (page >= 1 && page <= totalPages) {
       setCurrentPage(page);
       loadBookOrderData(page);
     }
@@ -414,16 +430,8 @@ const DynamicBookOrderPage = () => {
     if (currentPage > 1) {
       const prevPage = currentPage - 1;
       setCurrentPage(prevPage);
-
-      // Get cached data for previous page
-      const cacheKey = `${prevPage}-${pageSize}`;
-      if (allPages.has(cacheKey)) {
-        const cachedData = allPages.get(cacheKey);
-        setData(cachedData.data);
-        setLastDocId(cachedData.lastDocId);
-        setLastTimestamp(cachedData.lastTimestamp);
-        setHasMore(cachedData.hasMore);
-      }
+      // loadBookOrderData handles cache lookup via allPagesRef
+      loadBookOrderData(prevPage);
     }
   };
 
@@ -437,7 +445,8 @@ const DynamicBookOrderPage = () => {
       fetchTotalCount();
       loadBookOrderData(1);
     }
-  }, [status, bookName, fetchTotalCount, loadBookOrderData]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status, bookName]); // Intentionally exclude loadBookOrderData to prevent infinite loop
 
   if (status === "loading") {
     return (

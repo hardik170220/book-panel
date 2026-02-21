@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import {
   FaShoppingBag,
   FaTruck,
@@ -155,10 +155,14 @@ const RecentOrdersPage = () => {
 
   // Pagination states
   const [hasMore, setHasMore] = useState(false);
-  const [lastDocId, setLastDocId] = useState(null);
-  const [lastTimestamp, setLastTimestamp] = useState(null);
   const [totalCount, setTotalCount] = useState(0);
-  const [allPages, setAllPages] = useState(new Map()); // Cache pages
+  const [allPages, setAllPages] = useState(new Map()); // Cache pages (for UI re-renders)
+
+  // Use refs for cursor tokens — always current, no stale closure issues
+  const lastDocIdRef = useRef(null);
+  const lastTimestampRef = useRef(null);
+  const allPagesRef = useRef(new Map()); // mirror ref for synchronous cache reads inside callbacks
+  const pageSizeRef = useRef(50);
 
   // Filter states
   const [filters, setFilters] = useState({
@@ -225,31 +229,32 @@ const RecentOrdersPage = () => {
   }, []);
 
   // Load recent orders via API
-  const loadRecentOrders = useCallback(async (page = 1, newPageSize = pageSize) => {
+  const loadRecentOrders = useCallback(async (page = 1, newPageSize) => {
+    const effectivePageSize = newPageSize ?? pageSizeRef.current;
     try {
       setIsLoading(true);
       setError(null);
 
-      // Check if page is already cached for this page size
-      const cacheKey = `${page}-${newPageSize}`;
-      if (allPages.has(cacheKey)) {
-        const cachedData = allPages.get(cacheKey);
+      // Check cache via ref (always synchronous, never stale)
+      const cacheKey = `${page}-${effectivePageSize}`;
+      if (allPagesRef.current.has(cacheKey)) {
+        const cachedData = allPagesRef.current.get(cacheKey);
         setRecentOrders(cachedData.data);
-        setLastDocId(cachedData.lastDocId);
-        setLastTimestamp(cachedData.lastTimestamp);
+        lastDocIdRef.current = cachedData.lastDocId;
+        lastTimestampRef.current = cachedData.lastTimestamp;
         setHasMore(cachedData.hasMore);
         setIsLoading(false);
         return;
       }
 
-      let url = `https://getbookorders-fahifz22ha-uc.a.run.app?bookName=all&pageSize=${newPageSize}`;
+      let url = `https://getbookorders-fahifz22ha-uc.a.run.app?bookName=all&pageSize=${effectivePageSize}`;
 
-      // For pages after the first, use pagination tokens
-      if (page > 1 && lastDocId && lastTimestamp) {
-        url += `&lastDocId=${lastDocId}&lastTimestamp=${encodeURIComponent(lastTimestamp)}`;
+      // For pages after the first, use cursor tokens from refs (always current)
+      if (page > 1 && lastDocIdRef.current && lastTimestampRef.current) {
+        url += `&lastDocId=${lastDocIdRef.current}&lastTimestamp=${encodeURIComponent(lastTimestampRef.current)}`;
       }
 
-      console.log("Loading orders for page:", page, "with pageSize:", newPageSize);
+      console.log("Loading orders for page:", page, "with pageSize:", effectivePageSize);
 
       const response = await fetch(url);
 
@@ -287,22 +292,25 @@ const RecentOrdersPage = () => {
           };
         });
 
-        // Cache the page
-        const pageCache = new Map(allPages);
+        // Update cursor refs immediately
+        lastDocIdRef.current = result.lastDocId;
+        lastTimestampRef.current = result.lastTimestamp;
+
+        // Cache the page in both ref and state
+        const pageCache = new Map(allPagesRef.current);
         pageCache.set(cacheKey, {
           data: formattedData,
           lastDocId: result.lastDocId,
           lastTimestamp: result.lastTimestamp,
           hasMore: result.hasMore,
         });
+        allPagesRef.current = pageCache;
         setAllPages(pageCache);
 
         setRecentOrders(formattedData);
-        setLastDocId(result.lastDocId);
-        setLastTimestamp(result.lastTimestamp);
         setHasMore(result.hasMore);
 
-        console.log(`Loaded ${formattedData.length} orders for page ${page} with pageSize ${newPageSize}`);
+        console.log(`Loaded ${formattedData.length} orders for page ${page} with pageSize ${effectivePageSize}`);
       } else {
         setError(result.error || "No data received");
       }
@@ -313,44 +321,48 @@ const RecentOrdersPage = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [pageSize, lastDocId, lastTimestamp, allPages, formatDisplayName, showToast]);
+  }, [formatDisplayName, showToast]); // Only stable deps — refs handle cursor tokens
 
   // Handle page size change
   const handlePageSizeChange = (newPageSize) => {
+    pageSizeRef.current = newPageSize;
     setPageSize(newPageSize);
     setCurrentPage(1);
-    setAllPages(new Map()); // Clear cache when page size changes
+    // Reset cursor refs and both ref + state cache
+    lastDocIdRef.current = null;
+    lastTimestampRef.current = null;
+    allPagesRef.current = new Map();
+    setAllPages(new Map());
     loadRecentOrders(1, newPageSize);
   };
 
   // Generate page numbers for pagination
+  // NOTE: Cursor-based pagination cannot jump to arbitrary pages.
+  // We only show pages up to the LAST VISITED page (not totalCount-based last page)
+  // to prevent clicking an unreachable page.
   const generatePageNumbers = () => {
-    const totalPages = Math.ceil(totalCount / pageSize);
+    // Only show pages we have already fetched or can reach sequentially
+    const reachablePages = allPagesRef.current.size > 0
+      ? Math.max(...[...allPagesRef.current.keys()].map(k => parseInt(k.split('-')[0])))
+      : currentPage;
+
+    const maxPage = hasMore ? reachablePages + 1 : reachablePages; // +1 if there's a next page
     const current = currentPage;
-    const delta = 2; // Number of pages to show on each side of current page
+    const delta = 2;
     const pages = [];
-    const range = [];
+    const range = new Set();
 
-    range.push(1);
-
+    range.add(1);
     for (let i = current - delta; i <= current + delta; i++) {
-      if (i > 1 && i < totalPages) {
-        range.push(i);
-      }
+      if (i > 1 && i <= maxPage) range.add(i);
     }
+    if (hasMore && current + 1 <= maxPage) range.add(current + 1);
 
-    if (totalPages > 1) {
-      range.push(totalPages);
-    }
-
-    // Remove duplicates and sort
-    const uniqueRange = [...new Set(range)].sort((a, b) => a - b);
+    const uniqueRange = [...range].sort((a, b) => a - b);
 
     let prev = 0;
     for (const page of uniqueRange) {
-      if (page - prev > 1) {
-        pages.push('...');
-      }
+      if (page - prev > 1) pages.push('...');
       pages.push(page);
       prev = page;
     }
@@ -360,7 +372,9 @@ const RecentOrdersPage = () => {
 
   // Navigation functions
   const goToPage = (page) => {
-    if (page >= 1 && page <= Math.ceil(totalCount / pageSize)) {
+    // Only allow going to already-cached pages to avoid wrong cursor usage
+    const cacheKey = `${page}-${pageSizeRef.current}`;
+    if (allPagesRef.current.has(cacheKey) || page === 1) {
       setCurrentPage(page);
       loadRecentOrders(page);
     }
@@ -378,16 +392,8 @@ const RecentOrdersPage = () => {
     if (currentPage > 1) {
       const prevPage = currentPage - 1;
       setCurrentPage(prevPage);
-
-      // Get cached data for previous page
-      const cacheKey = `${prevPage}-${pageSize}`;
-      if (allPages.has(cacheKey)) {
-        const cachedData = allPages.get(cacheKey);
-        setRecentOrders(cachedData.data);
-        setLastDocId(cachedData.lastDocId);
-        setLastTimestamp(cachedData.lastTimestamp);
-        setHasMore(cachedData.hasMore);
-      }
+      // loadRecentOrders checks allPagesRef cache for previous page
+      loadRecentOrders(prevPage);
     }
   };
 
