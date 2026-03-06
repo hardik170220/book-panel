@@ -9,7 +9,7 @@ import {
   updateDoc,
   deleteDoc,
 } from "firebase/firestore";
-import { initializeApp } from "firebase/app";
+import { initializeApp, getApps } from "firebase/app";
 import Header from "./Header";
 import TableUI from "./TableUI";
 
@@ -24,7 +24,8 @@ const firebaseConfig = {
   measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
 };
 
-const app = initializeApp(firebaseConfig);
+// FIX 1: Guard Firebase double-init (prevents re-initialization on hot reload)
+const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
 const db = getFirestore(app);
 
 const DynamicBookOrderPage = () => {
@@ -57,12 +58,12 @@ const DynamicBookOrderPage = () => {
   const [pageSize, setPageSize] = useState(50);
   const [hasMore, setHasMore] = useState(false);
   const [totalCount, setTotalCount] = useState(0);
-  const [allPages, setAllPages] = useState(new Map()); // Cache pages
+  const [allPages, setAllPages] = useState(new Map());
 
   // Use refs for cursor tokens so they are ALWAYS current inside callbacks (no stale closure)
   const lastDocIdRef = useRef(null);
   const lastTimestampRef = useRef(null);
-  const allPagesRef = useRef(new Map()); // mirror of allPages for synchronous cache reads
+  const allPagesRef = useRef(new Map());
   const pageSizeRef = useRef(50);
 
   // Filter states
@@ -115,7 +116,7 @@ const DynamicBookOrderPage = () => {
     const baseColumns = [
       { field: "timestamp", header: "Date & Time" },
       { field: "registrationId", header: "Order Id" },
-      { field: "नाम", header: "Name" },
+      { field: "નાम", header: "Name" },
       { field: "मोबाइल नंबर", header: "Mobile" },
       { field: "शहर", header: "City" },
       { field: "એડ્રેસ", header: "Address" },
@@ -159,7 +160,7 @@ const DynamicBookOrderPage = () => {
         if (filters.deliveryType !== "unassigned" && filters.deliveryType !== "parcelId" && item.deliveryType !== filters.deliveryType) return false;
       }
 
-      // New delivery status filter
+      // Delivery status filter
       if (filters.deliveryStatus !== "all") {
         const hasDeliveredDate = item.deliveredDate && item.deliveredDate.trim() !== "";
         if (filters.deliveryStatus === "delivered" && !hasDeliveredDate) return false;
@@ -176,13 +177,10 @@ const DynamicBookOrderPage = () => {
       // Helper for text filters with multiple values and include/exclude mode
       const checkTextFilter = (itemValue, filterValue, mode) => {
         if (!filterValue) return true;
-
         const values = filterValue.split(',').map(v => v.trim().toLowerCase()).filter(v => v);
         if (values.length === 0) return true;
-
         const itemValLower = (itemValue || "").toLowerCase();
         const match = values.some(val => itemValLower.includes(val));
-
         return mode === "exclude" ? !match : match;
       };
 
@@ -192,7 +190,6 @@ const DynamicBookOrderPage = () => {
 
       const fullName = (item["नाम"] + " " + (item["उपनाम"] || "")).trim();
       if (!checkTextFilter(fullName, filters.searchName, filters.searchNameMode)) return false;
-
       if (!checkTextFilter(item["मोबाइल नंबर"], filters.searchMobile, filters.searchMobileMode)) return false;
 
       if (filters.dateFrom) {
@@ -251,6 +248,22 @@ const DynamicBookOrderPage = () => {
     return count;
   };
 
+  // FIX 2: calculateTotalCopies defined BEFORE loadBookOrderData (prevents TDZ error in minified build)
+  const calculateTotalCopies = useCallback((dataArray) => {
+    return dataArray.reduce((sum, item) => {
+      if (bookConfig.hasBookQuantities) {
+        const totalBookQty = bookConfig.bookQuantityFields.reduce((total, field) => {
+          return total + (parseInt(item.book_quantities?.[field.key] || 0, 10) || 0);
+        }, 0);
+        return sum + totalBookQty;
+      } else if (bookConfig.hasCopies) {
+        const copies = parseInt(item["નકલ"] || item["नकल"] || 1, 10);
+        return sum + (isNaN(copies) ? 1 : copies);
+      }
+      return sum;
+    }, 0);
+  }, [bookConfig]);
+
   // Fetch total count
   const fetchTotalCount = useCallback(async () => {
     if (!bookName) return;
@@ -275,8 +288,7 @@ const DynamicBookOrderPage = () => {
     }
   }, [bookName]);
 
-  // Load book orders with pagination
-  // NOTE: Uses refs for cursor tokens so this callback never goes stale
+  // FIX 3: loadBookOrderData now correctly depends on calculateTotalCopies (defined above)
   const loadBookOrderData = useCallback(async (page = 1, newPageSize) => {
     const effectivePageSize = newPageSize ?? pageSizeRef.current;
     try {
@@ -289,12 +301,11 @@ const DynamicBookOrderPage = () => {
         return;
       }
 
-      // Check if page is already cached — use ref for instant, synchronous read
+      // Check if page is already cached
       const cacheKey = `${page}-${effectivePageSize}`;
       if (allPagesRef.current.has(cacheKey)) {
         const cachedData = allPagesRef.current.get(cacheKey);
         setData(cachedData.data);
-        // Restore cursor tokens for this page so next-page works correctly
         lastDocIdRef.current = cachedData.lastDocId;
         lastTimestampRef.current = cachedData.lastTimestamp;
         setHasMore(cachedData.hasMore);
@@ -309,7 +320,6 @@ const DynamicBookOrderPage = () => {
 
       let url = `https://getbookorders-fahifz22ha-uc.a.run.app?bookName=${encodeURIComponent(normalizedBookName)}&pageSize=${effectivePageSize}`;
 
-      // For pages after the first, use cursor tokens from refs (always current)
       if (page > 1 && lastDocIdRef.current && lastTimestampRef.current) {
         url += `&lastDocId=${lastDocIdRef.current}&lastTimestamp=${encodeURIComponent(lastTimestampRef.current)}`;
       }
@@ -332,11 +342,9 @@ const DynamicBookOrderPage = () => {
           timestamp: new Date(item.timestamp)
         }));
 
-        // Update cursor refs immediately (synchronous, no stale read risk)
         lastDocIdRef.current = result.lastDocId;
         lastTimestampRef.current = result.lastTimestamp;
 
-        // Cache the page
         const pageCache = new Map(allPagesRef.current);
         pageCache.set(cacheKey, {
           data: formattedData,
@@ -361,14 +369,13 @@ const DynamicBookOrderPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [bookName]); // Only bookName as dep — refs handle the rest
+  }, [bookName, calculateTotalCopies]); // FIX: calculateTotalCopies added as dependency
 
   // Handle page size change
   const handlePageSizeChange = (newPageSize) => {
     pageSizeRef.current = newPageSize;
     setPageSize(newPageSize);
     setCurrentPage(1);
-    // Clear both ref and state cache when page size changes
     allPagesRef.current = new Map();
     setAllPages(new Map());
     lastDocIdRef.current = null;
@@ -380,7 +387,7 @@ const DynamicBookOrderPage = () => {
   const generatePageNumbers = () => {
     const totalPages = Math.ceil(totalCount / pageSize);
     const current = currentPage;
-    const delta = 2; // Number of pages to show on each side of current page
+    const delta = 2;
     const pages = [];
     const range = [];
 
@@ -394,7 +401,6 @@ const DynamicBookOrderPage = () => {
 
     range.push(totalPages);
 
-    // Remove duplicates and sort
     const uniqueRange = [...new Set(range)].sort((a, b) => a - b);
 
     let prev = 0;
@@ -430,7 +436,6 @@ const DynamicBookOrderPage = () => {
     if (currentPage > 1) {
       const prevPage = currentPage - 1;
       setCurrentPage(prevPage);
-      // loadBookOrderData handles cache lookup via allPagesRef
       loadBookOrderData(prevPage);
     }
   };
@@ -446,7 +451,7 @@ const DynamicBookOrderPage = () => {
       loadBookOrderData(1);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status, bookName]); // Intentionally exclude loadBookOrderData to prevent infinite loop
+  }, [status, bookName]);
 
   if (status === "loading") {
     return (
@@ -485,23 +490,20 @@ const DynamicBookOrderPage = () => {
           (selected) => selected.id === item.id
         );
         if (matchedItem) {
-          return {
-            ...item,
-            deliveredDate: deliveryDate,
-          };
+          return { ...item, deliveredDate: deliveryDate };
         }
         return item;
       });
 
       setData(updatedData);
 
-      // Update cache
       const updatedCache = new Map(allPages);
       updatedCache.set(`${currentPage}-${pageSize}`, {
         ...updatedCache.get(`${currentPage}-${pageSize}`),
         data: updatedData,
       });
       setAllPages(updatedCache);
+      allPagesRef.current = updatedCache;
 
       setUpdateStatus({
         type: "success",
@@ -527,8 +529,8 @@ const DynamicBookOrderPage = () => {
     setCurrentEditItem({ ...item, index });
     setParcelId(item.parcelId || "");
     setDeliveryType(item.deliveryType || "parcelId");
-    setEditAddress(item.address || "");
-    setEditPhone(item.phone || "");
+    setEditAddress(item.address || item["એડ્રેસ"] || item["एड्रेस"] || "");
+    setEditPhone(item.phone || item["मोबाइल नंबर"] || "");
     setEditModalOpen(true);
   };
 
@@ -551,13 +553,13 @@ const DynamicBookOrderPage = () => {
       newData.splice(index, 1);
       setData(newData);
 
-      // Update cache and invalidate if needed
       const updatedCache = new Map(allPages);
       updatedCache.set(`${currentPage}-${pageSize}`, {
         ...updatedCache.get(`${currentPage}-${pageSize}`),
         data: newData,
       });
       setAllPages(updatedCache);
+      allPagesRef.current = updatedCache;
 
       setUpdateStatus({
         type: "success",
@@ -565,7 +567,6 @@ const DynamicBookOrderPage = () => {
       });
       setTimeout(() => setUpdateStatus(null), 3000);
 
-      // Reload if page is now empty
       if (newData.length === 0 && currentPage > 1) {
         goToPreviousPage();
       }
@@ -592,7 +593,6 @@ const DynamicBookOrderPage = () => {
       const itemToUpdate = currentEditItem;
       const orderDocRef = doc(db, "bookorders", itemToUpdate.id);
 
-      // Determine which keys were used for mobile and address in the original data
       const phoneKey = Object.keys(itemToUpdate).find(key => key === "मोबाइल नंबर") || "मोबाइल नंबर";
       const addressKey = Object.keys(itemToUpdate).find(key =>
         ["એડ્રેસ/एड्रेस", "एड्रेस", "એડ્રેસ"].includes(key)
@@ -622,13 +622,13 @@ const DynamicBookOrderPage = () => {
       newData.sort((a, b) => b.timestamp - a.timestamp);
       setData(newData);
 
-      // Update cache
       const updatedCache = new Map(allPages);
       updatedCache.set(`${currentPage}-${pageSize}`, {
         ...updatedCache.get(`${currentPage}-${pageSize}`),
         data: newData,
       });
       setAllPages(updatedCache);
+      allPagesRef.current = updatedCache;
 
       setUpdateStatus({
         type: "success",
@@ -681,21 +681,6 @@ const DynamicBookOrderPage = () => {
       });
   };
 
-  const calculateTotalCopies = (dataArray) => {
-    return dataArray.reduce((sum, item) => {
-      if (bookConfig.hasBookQuantities) {
-        const totalBookQty = bookConfig.bookQuantityFields.reduce((total, field) => {
-          return total + (parseInt(item.book_quantities?.[field.key] || 0, 10) || 0);
-        }, 0);
-        return sum + totalBookQty;
-      } else if (bookConfig.hasCopies) {
-        const copies = parseInt(item["નકલ"] || item["नकल"] || 1, 10);
-        return sum + (isNaN(copies) ? 1 : copies);
-      }
-      return sum;
-    }, 0);
-  };
-
   const prepareDataWithActions = () => {
     return filteredData.map((item, index) => {
       const processedItem = {
@@ -704,7 +689,6 @@ const DynamicBookOrderPage = () => {
         timestamp: item.timestamp,
         originalIndex: data.indexOf(item),
         registrationId: item.registrationId || "N/A",
-
       };
 
       if (bookConfig.hasBookQuantities && item.book_quantities) {
@@ -950,7 +934,7 @@ const DynamicBookOrderPage = () => {
                     </select>
                   </div>
 
-                  {/* New Delivery Status Filter */}
+                  {/* Delivery Status Filter */}
                   <div>
                     <label className="block text-sm font-semibold mb-2 text-gray-700 dark:text-gray-300">
                       Delivery Status
@@ -1291,7 +1275,7 @@ const DynamicBookOrderPage = () => {
           <div className="fixed inset-0 bg-black/50 text-sm flex font-anek items-center justify-center z-50 animate-fadeIn">
             <div className="bg-card rounded-lg p-6 w-full max-w-md animate-scaleIn border border-border">
               <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-bold text-foreground"> {currentViewItem?.registrationId}</h2>
+                <h2 className="text-xl font-bold text-foreground">{currentViewItem?.registrationId}</h2>
                 <button
                   onClick={() => setViewModalOpen(false)}
                   className="p-1 rounded-full hover:bg-muted"
