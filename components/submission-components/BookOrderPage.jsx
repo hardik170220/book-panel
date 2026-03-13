@@ -116,7 +116,7 @@ const DynamicBookOrderPage = () => {
     const baseColumns = [
       { field: "timestamp", header: "Date & Time" },
       { field: "registrationId", header: "Order Id" },
-      { field: "નાम", header: "Name" },
+      { field: "नाम", header: "Name" },
       { field: "मोबाइल नंबर", header: "Mobile" },
       { field: "शहर", header: "City" },
       { field: "એડ્રેસ", header: "Address" },
