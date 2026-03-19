@@ -1,7 +1,7 @@
 // app/api/forms/[id]/route.js
 import { neon } from '@neondatabase/serverless';
 import { v2 as cloudinary } from 'cloudinary';
-import { uploadToCloudinary, deleteFromCloudinary } from '../../../../../book-panel/lib/cloudinary';
+import { uploadToCloudinary, deleteFromCloudinary } from '../../../lib/cloudinary';
 import { v4 as uuidv4 } from 'uuid';
 
 // Initialize Neon connection
