@@ -25,6 +25,7 @@ export type Submission = {
 export type FormDefinition = {
   id: string
   title: string
+  book_label: string
   slug: string
   order?: number
   link: string
